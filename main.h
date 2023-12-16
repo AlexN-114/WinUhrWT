@@ -106,8 +106,9 @@
 
 #define IDD_EDIT_ZEIT   8001
 #define IDD_EDIT_GRUND  8002
-#define IDD_TEXT_ZEIT   8003
-#define IDD_TEXT_GRUND  8004
-#define IDD_TEXT_ENDE   8005
-#define IDD_TEXT_INFO   8006
-#define IDD_BTN_INFO    8007
+#define IDD_EDIT_WOTA   8003
+#define IDD_TEXT_ZEIT   8004
+#define IDD_TEXT_GRUND  8005
+#define IDD_TEXT_ENDE   8006
+#define IDD_TEXT_INFO   8007
+#define IDD_BTN_INFO    8008

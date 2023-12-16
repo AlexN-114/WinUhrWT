@@ -9,9 +9,9 @@
  *                                                                          *
  ****************************************************************************/
 
-//***********************
-// Änderungsgeschichte **
-//***********************
+//*********************//
+// Änderungsgeschichte //
+//*********************//
 // aN / 27.03.2007 / 1.0.1.05 / Im Edit-Dialog alte Endzeit als Vorgabe anzeigen
 // aN / 27.03.2007 / 1.0.1.06 / Aufruf für Edit-Dialog auf modal geändert
 // aN / 10.04.2007 / 1.0.1.07 / Speichern und Wiederherstellen der Fensterposition
@@ -67,6 +67,7 @@
 // aN / 27.10.2023 / 3.0.0.60 / Einige kleine Änderungen
 // aN / 17.11.2023 / 3.0.0.61 / Statusanzeige
 // aN / 26.11.2023 / 3.0.0.62 / Statusanzeige per Menü/Tastendruck
+// aN / 16.12.2023 / 3.9.0.63 / erste Wochentag-Funktionen gehen schon
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -78,10 +79,11 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #include <winuser.h>
+#include <wingdi.h>
 #include <tchar.h>
 #include <stdio.h>
-#include <wingdi.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "main.h"
 
@@ -105,24 +107,6 @@
 #define MASK_COLOR          RGB(255,255,255)
 #define GCL_HICON           (-14)
 
-/** Prototypes **************************************************************/
-
-static LRESULT CALLBACK DlgProcMain(HWND, UINT, WPARAM, LPARAM);
-static LRESULT CALLBACK DlgProcEdit(HWND, UINT, WPARAM, LPARAM);
-static LRESULT CALLBACK DlgProcAlarm(HWND, UINT, WPARAM, LPARAM);
-static LRESULT CALLBACK DlgProcList(HWND, UINT, WPARAM, LPARAM);
-static LRESULT CALLBACK DlgProcInfo(HWND, UINT, WPARAM, LPARAM);
-static LRESULT CALLBACK DlgProcStatus(HWND, UINT, WPARAM, LPARAM);
-BOOL PlayResource(LPSTR lpName);
-void SetNextEvent(void);
-void AktOutput(HWND hwndDlg);
-void AktToolTip(void);
-void SetColors(HWND hwndCtl, HDC wParam);
-HBRUSH SetBkfColor(COLORREF TxtColr, COLORREF BkColr, HDC hdc);
-void SaveRect(void);
-void CalcRestZeit(SYSTEMTIME j, SYSTEMTIME e, SYSTEMTIME *r);
-void AddTime(int diff);
-
 /** Typen *******************************************************************/
 typedef struct
 {
@@ -142,6 +126,27 @@ typedef struct
     char wt[3];
     char grund[100];
 } ereignis;
+
+/** Prototypes **************************************************************/
+
+static LRESULT CALLBACK DlgProcMain(HWND, UINT, WPARAM, LPARAM);
+static LRESULT CALLBACK DlgProcEdit(HWND, UINT, WPARAM, LPARAM);
+static LRESULT CALLBACK DlgProcAlarm(HWND, UINT, WPARAM, LPARAM);
+static LRESULT CALLBACK DlgProcList(HWND, UINT, WPARAM, LPARAM);
+static LRESULT CALLBACK DlgProcInfo(HWND, UINT, WPARAM, LPARAM);
+static LRESULT CALLBACK DlgProcStatus(HWND, UINT, WPARAM, LPARAM);
+BOOL PlayResource(LPSTR lpName);
+int EventToEvent(ereignis *e1, ereignis *e2);
+int TimeToEvent(char *wt, int h, int m, int s, ereignis *e);
+void SetNextEvent(void);
+void AktOutput(HWND hwndDlg);
+void AktToolTip(void);
+void SetColors(HWND hwndCtl, HDC wParam);
+HBRUSH SetBkfColor(COLORREF TxtColr, COLORREF BkColr, HDC hdc);
+void SaveRect(void);
+void CalcRestZeit(SYSTEMTIME j, SYSTEMTIME e, SYSTEMTIME *r);
+void AddTime(int diff);
+
 /** Global variables ********************************************************/
 
 static HANDLE ghInstance;
@@ -168,9 +173,10 @@ int sound_off = 0; // Sound on/off
 
 SYSTEMTIME DZ = {2012, 0, 0,12,0,0,0,0};
 SYSTEMTIME EZ = {2012, 3,14,17,0,0,0,0};
-SYSTEMTIME RZ = { 0, 0, 0, 0,0,0,0,0};
+SYSTEMTIME RZ = {   0, 0, 0, 0,0,0,0,0};
 char alarmgrund[100] = "";
-char *wota[] = {"So\0nntag","Mo\0ntag","Di\0enstag","Mi\0ttwoch","Do\0nnerstag","Fr\0eitag","Sa\0mstag"};
+char wochentag[3] = "  ";
+char *wota[] = {"So\0Sonntag","Mo\0Montag","Di\0Dienstag","Mi\0Mittwoch","Do\0Donnerstag","Fr\0Freitag","Sa\0Samstag","Wt\0Werktag","We\0Wochenend"};
 
 uhr uhren[3] = {{NULL,NULL,NULL,0,0,{0,0,0,0}},
                 {NULL,NULL,NULL,0,0,{0,0,0,0}},
@@ -213,6 +219,104 @@ BOOL PlayResource(LPSTR lpName)
     bRtn = 0;
 
     return bRtn;
+}
+
+//****************************************************************************
+//  Zeit zwischen zwei Events
+//****************************************************************************
+int EventToEvent(ereignis *e1, ereignis *e2)
+{
+    return (TimeToEvent(e1->wt,e1->std,e1->min,e1->sec,e2));
+}
+
+//****************************************************************************
+//  Zeit bis zum Event
+//****************************************************************************
+int TimeToEvent(char *wt, int h, int m, int s, ereignis *e)
+{
+    int res=0;
+    long sts;        // Sekunden bis zum Start
+    long ste;        // Sekunden bis zum Event
+    int i;
+    short sWt;
+    int flag = 0;
+
+    sts = ((h*60)+m)*60+s;
+    ste = ((e->std*60)+e->min)*60+e->sec;
+
+    for(i=0; i<7; i++)
+    {
+        if (strcmp(wota[i], wt) != 0)
+        {
+            sts += 24*3600;
+            if (strcmp(wota[i],e->wt) == 0)
+            {
+                flag = 1;
+            }
+            if ((strcmp("Wt",e->wt)==0) && ((i>=1)&&(i<=5)))
+            {
+                flag = 1;
+            }
+            if ((strcmp("We",e->wt)==0) && ((i==0)&&(i==6)))
+            {
+                flag = 1;
+            }
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    if (flag != 0)
+    {
+        ste += 168*3600;
+    }
+
+    sWt = e->wt[0]*256+e->wt[1];
+    switch(sWt)
+    {
+        case 'So':
+            ste += 0*24*60*60;
+            break;
+        case 'Mo':
+            ste += 1*24*60*60;
+            break;
+        case 'Di':
+            ste += 2*24*60*60;
+            break;
+        case 'Mi':
+            ste += 3*24*60*60;
+            break;
+        case 'Do':
+            ste += 4*24*60*60;
+            break;
+        case 'Fr':
+            ste += 5*24*60*60;
+            break;
+        case 'Sa':
+            ste += 6*24*60*60;
+            break;
+        case 'Wt':
+            for (i=1; i<=5; i++)
+            {
+                ste += 24*60*60;
+                if (ste > sts) break;
+            }
+            break;
+        case 'We':
+            if (ste > sts) break;
+            ste += 6*24*60*60;
+            if (ste > sts) break;
+            ste += 1*24*60*60;
+            break;
+        default:
+            break;
+    }
+    res = ste - sts;
+    if (res < 0) res += 7*24*60*60;
+
+    return res % (7*24*60*60);
 }
 
 //****************************************************************************
@@ -407,13 +511,13 @@ void AddTime(int diff)
 void SetNextEvent(void)
 {
     SYSTEMTIME st;
-    int akt;
-    int evt;
+//    int akt;
+//    int evt;
     int dif;
-    int min = 235959;
+    int min = (167*60+59)*60+59;
 
     GetLocalTime(&st);
-    akt = (st.wHour*100+st.wMinute)*100+st.wSecond;
+//    akt = (st.wHour*60+st.wMinute)*60+st.wSecond;
 
     for(int i=0; i<10; i++)
     {
@@ -422,12 +526,13 @@ void SetNextEvent(void)
         if (strlen(e->grund) > 0)
         {
             erreicht = 0;
-            evt = (e->std*100+e->min)*100+e->sec;
-            if (evt < akt)
-            {
-                evt += 240000;
-            }
-            dif = evt - akt;
+//            evt = (24*60+00)*60+00;
+//            if (evt < akt)
+//            {
+//                evt += (e->std*60+e->min)*60+e->sec;
+//            }
+//            dif = evt - akt;
+            dif = TimeToEvent(wota[st.wDayOfWeek],st.wHour,st.wMinute,st.wSecond,e);
             if (dif < min)
             {
                 min = dif;
@@ -435,6 +540,7 @@ void SetNextEvent(void)
                 EZ.wMinute = e->min;
                 EZ.wSecond = e->sec;
                 strcpy(alarmgrund, e->grund);
+                strcpy(wochentag, e->wt);
             }
         }
     }
@@ -455,6 +561,7 @@ void AktEvent2Liste(void)
             ereignisse[i].min = (BYTE)EZ.wMinute;
             ereignisse[i].sec = (BYTE)EZ.wSecond;
             strcpy(ereignisse[i].grund, alarmgrund);
+            strcpy(ereignisse[i].wt, wochentag);
             return;
         }
     }
@@ -514,7 +621,7 @@ void AktToolTip(void)
     toolTip.uId = (UINT_PTR)uhren[0].hWnd;
     toolTip.hwnd = uhren[0].hWnd;
     uhren[0].hToolTip = CreateWindowEx(0, TOOLTIPS_CLASS, NULL, WS_POPUP | WS_BORDER | TTS_ALWAYSTIP,
-                                       CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, 
+                                       CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                                        toolTip.hwnd, NULL, ghInstance, NULL);
     SendMessage(uhren[0].hToolTip, TTM_ADDTOOL, 0, (LPARAM)(&toolTip));
 
@@ -544,10 +651,18 @@ void AktToolTip(void)
 //****************************************************************************
 void SortList(void)
 {
+    SYSTEMTIME tm;
+    int times[10] = {0};
     ereignis * e1, *e2;
     int v1, v2;
     int ok = 0;
     int tausch;
+
+    GetLocalTime(&tm);
+    for (int i=0; i < 10; i++)
+    {
+        times[i] = TimeToEvent(wota[tm.wDayOfWeek],tm.wHour,tm.wMinute,tm.wSecond,&ereignisse[i]);
+    }
 
     while(!ok)
     {
@@ -568,8 +683,10 @@ void SortList(void)
             {
                 if (strlen(e2->grund) > 0)
                 {
-                    v1 = (e1->std * 100 + e1->min) * 100 + e1->sec;
-                    v2 = (e2->std * 100 + e2->min) * 100 + e2->sec;
+                    //v1 = (e1->std * 100 + e1->min) * 100 + e1->sec;
+                    //v2 = (e2->std * 100 + e2->min) * 100 + e2->sec;
+                    v1 = times[i+0];
+                    v2 = times[i+1];
                     if(v2 < v1)
                     {
                         tausch = 1;
@@ -578,10 +695,16 @@ void SortList(void)
             }
             if(tausch == 1)
             {
-                ereignis h;
-                h = *e1;
+                ereignis he;
+                int hi;
+                he = *e1;
                 *e1 = *e2;
-                *e2 = h;
+                *e2 = he;
+
+                hi = times[i+0];
+                times[i+0] = times[i+1];
+                times[i+1] = hi;
+
                 ok = 0;
             }
         }
@@ -1039,12 +1162,22 @@ void AktOutput(HWND hwndDlg)
     char hStr[50];
     static int tag = -1;
     static int ez = -1;
+    int restZeit;
+    ereignis e;
 
     GetLocalTime(lpST);
     sprintf(hStr, "%02d:%02d:%02d", lpST->wHour, lpST->wMinute, lpST->wSecond);
     SetDlgItemText(hwndDlg, IDD_UHRZEIT, hStr);
 
-    CalcRestZeit(ST, EZ, &RZ);
+//    CalcRestZeit(ST, EZ, &RZ);
+    e.std = (char)EZ.wHour;
+    e.min = (char)EZ.wMinute;
+    e.sec = (char)EZ.wSecond;
+    strcpy(e.wt, wochentag);//BookMark [{AktOutput-wota}]
+    restZeit = TimeToEvent(wota[ST.wDayOfWeek],ST.wHour,ST.wMinute,ST.wSecond, &e);
+    RZ.wHour = (short)(restZeit / 3600);
+    RZ.wMinute = (short)(restZeit / 60 - RZ.wHour * 60);
+    RZ.wSecond = restZeit % 60;
 
     if (ST.wDay != tag)
     {
@@ -1107,7 +1240,7 @@ HBRUSH SetBkfColor(COLORREF TxtColr, COLORREF BkColr, HDC hdc)
     {
         tc = TxtColr;
         bc = BkColr;
-    } 
+    }
     DeleteObject(ReUsableBrush);
     ReUsableBrush = CreateSolidBrush(bc);
     SetTextColor(hdc, tc);
@@ -1194,12 +1327,18 @@ void SaveRect(void)
 {
     FILE * f;
     char hStr[150];
+    char wt[3];
 
+    wt[0] = wochentag[0];
+    wt[1] = wochentag[1];
+    wt[2] = 0;
     f = fopen(IniName, "w");
     if (f != NULL)
     {
         // Alarm speichern
-        sprintf(hStr, "%02d:%02d:%02d\n", EZ.wHour, EZ.wMinute, EZ.wSecond);
+        wt[0]=(wochentag[0]==' ')?'_':wochentag[0];
+        wt[1]=(wochentag[1]==' ')?'_':wochentag[1];
+        sprintf(hStr, "%2s-%02d:%02d:%02d\n", wt, EZ.wHour, EZ.wMinute, EZ.wSecond);
         fwrite(hStr, 1, strlen(hStr), f);
 
         sprintf(hStr, "%s\n", alarmgrund);
@@ -1223,7 +1362,9 @@ void SaveRect(void)
         for (int i=0; i<10; i++)
         {
             ereignis *e = &ereignisse[i];
-            fprintf(f, "%02d:%02d:%02d,%2s,%s\n",e->std,e->min,e->sec,e->wt,trim(e->grund));
+            wt[0]=(e->wt[0]==' ')?'_':e->wt[0];
+            wt[1]=(e->wt[1]==' ')?'_':e->wt[1];
+            fprintf(f, "%2s-%02d:%02d:%02d,%s\n",wt,e->std,e->min,e->sec,trim(e->grund));
         }
         fclose(f);
     }
@@ -1320,11 +1461,14 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     {
         // Endzeit einlesen
         fgets(hStr, 50, f);
-        if (3 == sscanf(hStr, "%d:%d:%d", &wHour, &wMinute, &wSecond))
+        if (4 == sscanf(hStr, "%2s-%d:%d:%d", wochentag, &wHour, &wMinute, &wSecond))
         {
             EZ.wHour = wHour % 24;
             EZ.wMinute = wMinute % 60;
             EZ.wSecond = wSecond % 60;
+            wochentag[0]=(wochentag[0]==' ')?'_':wochentag[0];
+            wochentag[1]=(wochentag[1]==' ')?'_':wochentag[1];
+
         }
 
         // Grund für Alarm lesen
@@ -1346,12 +1490,14 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
             int h,m,s;
             int x;
             ereignis *e = &ereignisse[i];
-            x = fscanf(f,"%d:%d:%d,",&h,&m,&s);
+            x = fscanf(f,"%2s-%d:%d:%d,",e->wt,&h,&m,&s);
             fgets(e->grund,100,f);
             e->std = (char)h;
             e->min = (char)m;
             e->sec = (char)s;
             dotrim(e->grund);
+            e->wt[0]=(e->wt[0]=='_')?' ':e->wt[0];
+            e->wt[1]=(e->wt[1]=='_')?' ':e->wt[1];
         }
 
         // Datei schließen
@@ -1392,7 +1538,7 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 
     while (GetMessage(&Msg, NULL, 0, 0) > 0)
     {
-        if (!TranslateAccelerator(uhren[0].hWnd,hAccelTable,&Msg)) 
+        if (!TranslateAccelerator(uhren[0].hWnd,hAccelTable,&Msg))
         {
             TranslateMessage(&Msg);
             DispatchMessage(&Msg);
@@ -1904,6 +2050,7 @@ static LRESULT CALLBACK DlgProcEdit(HWND hwndEDlg, UINT uMsg, WPARAM wParam, LPA
         case WM_INITDIALOG:
             sprintf(hStr, "%02d:%02d:%02d", EZ.wHour, EZ.wMinute, EZ.wSecond);
             SetDlgItemText(hwndEDlg, IDD_EDIT_ZEIT, hStr);
+            SetDlgItemText(hwndEDlg, IDD_EDIT_WOTA, wochentag);
             SetDlgItemText(hwndEDlg, IDD_EDIT_GRUND, alarmgrund);
             return TRUE;
 
@@ -1939,6 +2086,7 @@ static LRESULT CALLBACK DlgProcEdit(HWND hwndEDlg, UINT uMsg, WPARAM wParam, LPA
                     }
 
                     GetDlgItemText(hwndEDlg, IDD_EDIT_GRUND, alarmgrund, 99);
+                    GetDlgItemText(hwndEDlg, IDD_EDIT_WOTA , wochentag , 3 );
 
                     EndDialog(hwndEDlg, TRUE);
                     return TRUE;
@@ -2048,12 +2196,14 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
             sprintf(hStr, "%02d:%02d:%02d", EZ.wHour, EZ.wMinute, EZ.wSecond);
             SetDlgItemText(hwndDlg, IDD_ZEIT_AKT, hStr);
             SetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund);
+            SetDlgItemText(hwndDlg, IDD_WOCHENTAG, wochentag);
             for (int i=0; i<10; i++)
             {
                 ereignis e = ereignisse[i];
                 SetDlgItemText(hwndDlg, IDD_EVENT_01+2*i, e.grund);
                 sprintf(hStr, "%02d:%02d:%02d", e.std, e.min, e.sec);
                 SetDlgItemText(hwndDlg, IDD_ZEIT_01+2*i, hStr);
+                SetDlgItemText(hwndDlg, IDD_WT_01+i, e.wt);
             }
             return TRUE;
 
@@ -2091,7 +2241,11 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 
                     GetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund, 100);
                     dotrim(alarmgrund);
-                    
+                    GetDlgItemText(hwndDlg, IDD_WOCHENTAG, hStr, 100);
+                    strupr(hStr);
+                    strlwr(hStr+1);
+                    strncpy(wochentag,hStr,2);
+
                     // Liste lesen
                     for (int i=0; i<10; i++)
                     {
@@ -2104,6 +2258,10 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                         e->min = (char)(m%60);
                         e->sec = (char)(s%60);
                         GetDlgItemText(hwndDlg,IDD_EVENT_01+i*2,e->grund,100);
+                        GetDlgItemText(hwndDlg,IDD_WT_01+i,hStr,100);
+                        strupr(hStr);
+                        strlwr(hStr+1);
+                        strncpy(e->wt,hStr,2);
                         //dotrim(e->grund);
                     }
                     // und speichern
@@ -2170,7 +2328,7 @@ static LRESULT CALLBACK DlgProcStatus(HWND hwndDlg, UINT uMsg, WPARAM wParam, LP
             SetTimer(hwndDlg, TIMER_STATUS, 5000, NULL);
             sprintf(outstr, "Zeit : %2d:%02d:%02d\r\nAlarm: %s\r\nTon  : %s",
                     EZ.wHour,EZ.wMinute,EZ.wSecond,
-                    alarmgrund, 
+                    alarmgrund,
                     (sound_off)?"aus":"an");
             SetDlgItemText(hwndDlg, IDD_STATUS, outstr);
             return TRUE;
