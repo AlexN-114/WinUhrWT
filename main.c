@@ -11,7 +11,7 @@
 
 //*********************//
 // Änderungsgeschichte //
-//*********************//
+//*********************//*****/
 // aN / 27.03.2007 / 1.0.1.05 / Im Edit-Dialog alte Endzeit als Vorgabe anzeigen
 // aN / 27.03.2007 / 1.0.1.06 / Aufruf für Edit-Dialog auf modal geändert
 // aN / 10.04.2007 / 1.0.1.07 / Speichern und Wiederherstellen der Fensterposition
@@ -68,6 +68,10 @@
 // aN / 17.11.2023 / 3.0.0.61 / Statusanzeige
 // aN / 26.11.2023 / 3.0.0.62 / Statusanzeige per Menü/Tastendruck
 // aN / 16.12.2023 / 3.9.0.63 / erste Wochentag-Funktionen gehen schon
+// aN / 21.12.2023 / 3.9.0.64 / TimeToEvent schein zu funktionieren
+// aN / 22.12.2023 / 3.9.0.65 / Listendialog mit Eintrag "sortiere"
+// aN / 25.12.2023 / 3.9.0.66 / & bei div. Dialogen ergänzt
+// aN / 25.12.2023 / 4.0.0.67 / neues Kleid
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -234,32 +238,40 @@ int EventToEvent(ereignis *e1, ereignis *e2)
 //****************************************************************************
 int TimeToEvent(char *wt, int h, int m, int s, ereignis *e)
 {
-    int res=0;
-    long sts;        // Sekunden bis zum Start
-    long ste;        // Sekunden bis zum Event
+    int res = 0;
+    long sts;  // Sekunden bis zum Start
+    long ste;  // Sekunden bis zum Event
     int i;
     short sWt;
     int flag = 0;
 
-    sts = ((h*60)+m)*60+s;
-    ste = ((e->std*60)+e->min)*60+e->sec;
+    sts = ((h * 60) + m) * 60 + s;
+    ste = ((e->std * 60) + e->min) * 60 + e->sec;
 
-    for(i=0; i<7; i++)
+    for(i = 0; i < 7; i++)
     {
-        if (strcmp(wota[i], wt) != 0)
+        if(strcmp(wota[i], wt) != 0)
         {
-            sts += 24*3600;
-            if (strcmp(wota[i],e->wt) == 0)
+            sts += 24 * 3600;
+            if(strcmp(wota[i], e->wt) == 0)
             {
                 flag = 1;
             }
-            if ((strcmp("Wt",e->wt)==0) && ((i>=1)&&(i<=5)))
+            else if((strcmp("Wt", e->wt) == 0) && ((i >= 1) && (i <= 5)))
             {
-                flag = 1;
+                if ((sts-ste) < 0)
+                {
+                    flag = 1; 
+                }
+                break;
             }
-            if ((strcmp("We",e->wt)==0) && ((i==0)&&(i==6)))
+            else if((strcmp("We", e->wt) == 0) && ((i == 0) || (i == 6)))
             {
-                flag = 1;
+                if ((sts-ste) < 0)
+                {
+                    flag = 1; 
+                }
+                break;
             }
         }
         else
@@ -268,55 +280,59 @@ int TimeToEvent(char *wt, int h, int m, int s, ereignis *e)
         }
     }
 
-    if (flag != 0)
+    if(flag != 0)
     {
-        ste += 168*3600;
+        ste += 168 * 3600;
     }
 
-    sWt = e->wt[0]*256+e->wt[1];
+    sWt = e->wt[0] * 256 + e->wt[1];
     switch(sWt)
     {
         case 'So':
-            ste += 0*24*60*60;
+            ste += 0 * 24 * 60 * 60;
             break;
         case 'Mo':
-            ste += 1*24*60*60;
+            ste += 1 * 24 * 60 * 60;
             break;
         case 'Di':
-            ste += 2*24*60*60;
+            ste += 2 * 24 * 60 * 60;
             break;
         case 'Mi':
-            ste += 3*24*60*60;
+            ste += 3 * 24 * 60 * 60;
             break;
         case 'Do':
-            ste += 4*24*60*60;
+            ste += 4 * 24 * 60 * 60;
             break;
         case 'Fr':
-            ste += 5*24*60*60;
+            ste += 5 * 24 * 60 * 60;
             break;
         case 'Sa':
-            ste += 6*24*60*60;
+            ste += 6 * 24 * 60 * 60;
             break;
         case 'Wt':
-            for (i=1; i<=5; i++)
+            for(i = 1; i <= 5; i++)
             {
-                ste += 24*60*60;
-                if (ste > sts) break;
+                ste += 24 * 60 * 60;
+                if(ste > sts)
+                    break;
             }
             break;
         case 'We':
-            if (ste > sts) break;
-            ste += 6*24*60*60;
-            if (ste > sts) break;
-            ste += 1*24*60*60;
+            if(ste > sts)
+                break;
+            ste += 6 * 24 * 60 * 60;
+            if(ste > sts)
+                break;
+            ste += 1 * 24 * 60 * 60;
             break;
         default:
             break;
     }
     res = ste - sts;
-    if (res < 0) res += 7*24*60*60;
+    if(res < 0)
+        res += 7 * 24 * 60 * 60;
 
-    return res % (7*24*60*60);
+    return res % (7 * 24 * 60 * 60);
 }
 
 //****************************************************************************
@@ -1780,7 +1796,7 @@ static LRESULT CALLBACK DlgProcMain(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                     CheckMenuItem(uhren[1].hSMenu, IDM_NOSOUND, sound_off?MF_CHECKED:MF_UNCHECKED);
                     CheckMenuItem(uhren[2].hSMenu, IDM_NOSOUND, sound_off?MF_CHECKED:MF_UNCHECKED);
                     CheckMenuItem(hPopupMenu, IDM_NOSOUND, sound_off?MF_CHECKED:MF_UNCHECKED);
-                    DialogBox(ghInstance, MAKEINTRESOURCE(DLG_STATUS), hwndDlg, (DLGPROC)DlgProcStatus);
+                    DialogBox(NULL, MAKEINTRESOURCE(DLG_STATUS), hwndDlg, (DLGPROC)DlgProcStatus);
                     return TRUE;
 
                 case IDM_NEXT:
@@ -1913,7 +1929,7 @@ static LRESULT CALLBACK DlgProcMain(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
             AktOutput(hwndDlg);
             // Tray-Tip aktualisieren
             GetLocalTime(&Jetzt);
-            sprintf(nid.szTip, "%2s: %02d.%02d.%04d\nJetzt: %02d:%02d:%02d\nRest: %02d:%02d:%02d\nEnde: %02d:%02d:%02d",
+            sprintf(nid.szTip, "%2s: %3d.%02d.%04d\nJetzt: %3d:%02d:%02d\nRest: %3d:%02d:%02d\nEnde: %3d:%02d:%02d",
                     wota[Jetzt.wDayOfWeek], Jetzt.wDay, Jetzt.wMonth, Jetzt.wYear /*%100*/ ,
                     Jetzt.wHour, Jetzt.wMinute, Jetzt.wSecond,
                     RZ.wHour, RZ.wMinute, RZ.wSecond,
@@ -2242,6 +2258,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                     GetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund, 100);
                     dotrim(alarmgrund);
                     GetDlgItemText(hwndDlg, IDD_WOCHENTAG, hStr, 100);
+                    dotrim(hStr);
                     strupr(hStr);
                     strlwr(hStr+1);
                     strncpy(wochentag,hStr,2);
@@ -2259,7 +2276,17 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                         e->sec = (char)(s%60);
                         GetDlgItemText(hwndDlg,IDD_EVENT_01+i*2,e->grund,100);
                         GetDlgItemText(hwndDlg,IDD_WT_01+i,hStr,100);
+                        dotrim(hStr);
                         strupr(hStr);
+                        if (strchr(hStr,'X')!=NULL)
+                        {
+                            strcpy(e->wt,"  ");
+                            e->std = 0;
+                            e->min = 0;
+                            e->sec = 0;
+                            e->grund[0] = 0;
+                            continue;
+                        }
                         strlwr(hStr+1);
                         strncpy(e->wt,hStr,2);
                         //dotrim(e->grund);
@@ -2277,6 +2304,91 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                         SetDlgItemText(hwndDlg, IDD_EVENT_01+2*i, e.grund);
                         sprintf(hStr, "%02d:%02d:%02d", e.std, e.min, e.sec);
                         SetDlgItemText(hwndDlg, IDD_ZEIT_01+2*i, hStr);
+                        SetDlgItemText(hwndDlg, IDD_WT_01+i, e.wt);
+                    }
+                    SaveRect();
+                    return TRUE;
+
+                case IDD_SORT_LISTE:
+                    // Liste lesen
+                    for (int i=0; i<10; i++)
+                    {
+                        ereignis *e = &ereignisse[i];
+
+                        memset(e,0,sizeof(ereignis));
+                        GetDlgItemText(hwndDlg,IDD_ZEIT_01+i*2,hStr,100);
+                        sscanf(hStr,"%d:%d:%d",&h,&m,&s);
+                        e->std = (char)(h%24);
+                        e->min = (char)(m%60);
+                        e->sec = (char)(s%60);
+                        GetDlgItemText(hwndDlg,IDD_EVENT_01+i*2,e->grund,100);
+                        GetDlgItemText(hwndDlg,IDD_WT_01+i,hStr,100);
+                        strupr(hStr);
+                        if (strchr(hStr,'X')!=NULL)
+                        {
+                            strcpy(e->wt,"  ");
+                            e->std = 0;
+                            e->min = 0;
+                            e->sec = 0;
+                            e->grund[0] = 0;
+                            continue;
+                        }
+                        strlwr(hStr+1);
+                        strncpy(e->wt,hStr,2);
+                        //dotrim(e->grund);
+                    }
+                    SortList();
+                    for (int i=0; i<10; i++)
+                    {
+                        ereignis e = ereignisse[i];
+                        SetDlgItemText(hwndDlg, IDD_EVENT_01+2*i, e.grund);
+                        sprintf(hStr, "%02d:%02d:%02d", e.std, e.min, e.sec);
+                        SetDlgItemText(hwndDlg, IDD_ZEIT_01+2*i, hStr);
+                        SetDlgItemText(hwndDlg, IDD_WT_01+i, e.wt);
+                    }
+                    SaveRect();
+                    return TRUE;
+
+                case IDD_NEXT_LISTE:
+                    // Liste lesen
+                    for (int i=0; i<10; i++)
+                    {
+                        ereignis *e = &ereignisse[i];
+
+                        memset(e,0,sizeof(ereignis));
+                        GetDlgItemText(hwndDlg,IDD_ZEIT_01+i*2,hStr,100);
+                        sscanf(hStr,"%d:%d:%d",&h,&m,&s);
+                        e->std = (char)(h%24);
+                        e->min = (char)(m%60);
+                        e->sec = (char)(s%60);
+                        GetDlgItemText(hwndDlg,IDD_EVENT_01+i*2,e->grund,100);
+                        GetDlgItemText(hwndDlg,IDD_WT_01+i,hStr,100);
+                        strupr(hStr);
+                        if (strchr(hStr,'X')!=NULL)
+                        {
+                            strcpy(e->wt,"  ");
+                            e->std = 0;
+                            e->min = 0;
+                            e->sec = 0;
+                            e->grund[0] = 0;
+                            continue;
+                        }
+                        strlwr(hStr+1);
+                        strncpy(e->wt,hStr,2);
+                        //dotrim(e->grund);
+                    }
+                    SetNextEvent();
+                    sprintf(hStr, "%02d:%02d:%02d", EZ.wHour, EZ.wMinute, EZ.wSecond);
+                    SetDlgItemText(hwndDlg, IDD_ZEIT_AKT, hStr);
+                    SetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund);
+                    SetDlgItemText(hwndDlg, IDD_WOCHENTAG, wochentag);
+                    for (int i=0; i<10; i++)
+                    {
+                        ereignis e = ereignisse[i];
+                        SetDlgItemText(hwndDlg, IDD_EVENT_01+2*i, e.grund);
+                        sprintf(hStr, "%02d:%02d:%02d", e.std, e.min, e.sec);
+                        SetDlgItemText(hwndDlg, IDD_ZEIT_01+2*i, hStr);
+                        SetDlgItemText(hwndDlg, IDD_WT_01+i, e.wt);
                     }
                     SaveRect();
                     return TRUE;
@@ -2288,7 +2400,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
             break;
 
         case WM_CLOSE:
-            EndDialog(hwndDlg, 0);
+            EndDialog(hwndDlg, TRUE);
             return TRUE;
 
     }
