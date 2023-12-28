@@ -2331,7 +2331,6 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                             e->min = 0;
                             e->sec = 0;
                             e->grund[0] = 0;
-                            continue;
                         }
                         strlwr(hStr+1);
                         strncpy(e->wt,hStr,2);
