@@ -72,6 +72,7 @@
 // aN / 22.12.2023 / 3.9.0.65 / Listendialog mit Eintrag "sortiere"
 // aN / 25.12.2023 / 3.9.0.66 / & bei div. Dialogen ergänzt
 // aN / 25.12.2023 / 4.0.0.67 / neues Kleid
+// aN / 29.12.2023 / 4.0.0.68 / einige Fixis
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -1213,7 +1214,8 @@ void AktOutput(HWND hwndDlg)
         SetDlgItemText(uhren[2].hWnd, IDD_ENDZEIT, hStr);
         ez = (((EZ.wHour << 6) + EZ.wMinute) << 6) + EZ.wSecond;
     }
-    sprintf(hStr, "%02d:%02d:%02d .", RZ.wHour, RZ.wMinute, RZ.wSecond);
+    sprintf(hStr, "%03d:%02d:%02d .", RZ.wHour, RZ.wMinute, RZ.wSecond);
+    if (hStr[0] == '0') hStr[0] = ' ';
     SetDlgItemText(hwndDlg, IDD_RESTZEIT, hStr);
 
     if (RZ.wHour == 0 && RZ.wMinute == 0 && RZ.wSecond == 0)
@@ -2061,7 +2063,7 @@ static LRESULT CALLBACK DlgProcEdit(HWND hwndEDlg, UINT uMsg, WPARAM wParam, LPA
     int items;
     int h,m,s;
 
-    switch (uMsg)
+    switch(uMsg)
     {
         case WM_INITDIALOG:
             sprintf(hStr, "%02d:%02d:%02d", EZ.wHour, EZ.wMinute, EZ.wSecond);
@@ -2071,22 +2073,22 @@ static LRESULT CALLBACK DlgProcEdit(HWND hwndEDlg, UINT uMsg, WPARAM wParam, LPA
             return TRUE;
 
         case WM_COMMAND:
-            switch (GET_WM_COMMAND_ID(wParam, lParam))
+            switch(GET_WM_COMMAND_ID(wParam, lParam))
             {
                 case IDOK:
                     GetDlgItemText(hwndEDlg, IDD_EDIT_ZEIT, hStr, 99);
-                    items=sscanf(hStr, "%u:%u:%u", &h, &m, &s);
+                    items = sscanf(hStr, "%u:%u:%u", &h, &m, &s);
                     // eine Einfache Syntaxprüfung der Eingabe  ** aN 09.08.2023
                     switch(items)
                     {
                         case 3:
-                            EZ.wHour   = h % 24;
+                            EZ.wHour = h % 24;
                             EZ.wMinute = m % 60;
                             EZ.wSecond = s % 60;
                             erreicht = 0;
                             break;
                         case 2:
-                            EZ.wHour   = h % 24;
+                            EZ.wHour = h % 24;
                             EZ.wMinute = m % 60;
                             EZ.wSecond = 0;
                             erreicht = 0;
@@ -2101,8 +2103,12 @@ static LRESULT CALLBACK DlgProcEdit(HWND hwndEDlg, UINT uMsg, WPARAM wParam, LPA
                             break;
                     }
 
-                    GetDlgItemText(hwndEDlg, IDD_EDIT_GRUND, alarmgrund, 99);
-                    GetDlgItemText(hwndEDlg, IDD_EDIT_WOTA , wochentag , 3 );
+                    GetDlgItemText(hwndEDlg, IDD_EDIT_GRUND, alarmgrund, 100);
+                    dotrim(alarmgrund);
+                    GetDlgItemText(hwndEDlg, IDD_EDIT_WOTA, wochentag, 3);
+                    dotrim(wochentag);
+                    strupr(wochentag);
+                    strlwr(wochentag + 1);
 
                     EndDialog(hwndEDlg, TRUE);
                     return TRUE;
@@ -2257,7 +2263,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 
                     GetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund, 100);
                     dotrim(alarmgrund);
-                    GetDlgItemText(hwndDlg, IDD_WOCHENTAG, hStr, 100);
+                    GetDlgItemText(hwndDlg, IDD_WOCHENTAG, hStr, 3);
                     dotrim(hStr);
                     strupr(hStr);
                     strlwr(hStr+1);
