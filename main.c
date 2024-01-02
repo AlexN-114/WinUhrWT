@@ -272,6 +272,10 @@ int TimeToEvent(char *wt, int h, int m, int s, ereignis *e)
                 {
                     flag = 1; 
                 }
+                if (0 == i)
+                {
+                    sts -= 24 * 3600;
+                }
                 break;
             }
         }
@@ -2303,6 +2307,40 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                     return TRUE;
 
                 case IDD_IN_LISTE:
+                    GetDlgItemText(hwndDlg, IDD_ZEIT_AKT, hStr, 100);
+                    items=sscanf(hStr, "%d:%d:%d", &h, &m, &s);
+                    // eine Einfache Syntaxprüfung der Eingabe  ** aN 09.08.2023
+                    switch(items)
+                    {
+                        case 3:
+                            EZ.wHour   = h % 24;
+                            EZ.wMinute = m % 60;
+                            EZ.wSecond = s % 60;
+                            erreicht = 0;
+                            break;
+                        case 2:
+                            EZ.wHour   = h % 24;
+                            EZ.wMinute = m % 60;
+                            EZ.wSecond = 0;
+                            erreicht = 0;
+                            break;
+                        case 1:
+                            GetLocalTime(&EZ);
+                            EZ.wSecond = 0;
+                            AddTime(h);
+                            erreicht = 0;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    GetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund, 100);
+                    dotrim(alarmgrund);
+                    GetDlgItemText(hwndDlg, IDD_WOCHENTAG, hStr, 3);
+                    dotrim(hStr);
+                    strupr(hStr);
+                    strlwr(hStr+1);
+                    strncpy(wochentag,hStr,2);
                     AktEvent2Liste();
                     for (int i=0; i<10; i++)
                     {
