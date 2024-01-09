@@ -73,6 +73,7 @@
 // aN / 25.12.2023 / 3.9.0.66 / & bei div. Dialogen ergänzt
 // aN / 25.12.2023 / 4.0.0.67 / neues Kleid
 // aN / 29.12.2023 / 4.0.0.68 / einige Fixis
+// aN / 09.01.2024 / 4.0.0.71 / TimeToEvent (hoffentlich) korrigiert
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -257,26 +258,6 @@ int TimeToEvent(char *wt, int h, int m, int s, ereignis *e)
             if(strcmp(wota[i], e->wt) == 0)
             {
                 flag = 1;
-            }
-            else if((strcmp("Wt", e->wt) == 0) && ((i >= 1) && (i <= 5)))
-            {
-                if ((sts-ste) < 0)
-                {
-                    flag = 1; 
-                }
-                break;
-            }
-            else if((strcmp("We", e->wt) == 0) && ((i == 0) || (i == 6)))
-            {
-                if ((sts-ste) < 0)
-                {
-                    flag = 1; 
-                }
-                if (0 == i)
-                {
-                    sts -= 24 * 3600;
-                }
-                break;
             }
         }
         else
@@ -1358,6 +1339,7 @@ void SaveRect(void)
     if (f != NULL)
     {
         // Alarm speichern
+        wt[0]=(wochentag[0]=='\0')?'_':wochentag[0];
         wt[0]=(wochentag[0]==' ')?'_':wochentag[0];
         wt[1]=(wochentag[1]==' ')?'_':wochentag[1];
         sprintf(hStr, "%2s-%02d:%02d:%02d\n", wt, EZ.wHour, EZ.wMinute, EZ.wSecond);
@@ -2341,6 +2323,8 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                     strupr(hStr);
                     strlwr(hStr+1);
                     strncpy(wochentag,hStr,2);
+                    SetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund);
+                    SetDlgItemText(hwndDlg, IDD_WOCHENTAG, wochentag);
                     AktEvent2Liste();
                     for (int i=0; i<10; i++)
                     {
