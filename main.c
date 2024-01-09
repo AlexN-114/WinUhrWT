@@ -74,6 +74,7 @@
 // aN / 25.12.2023 / 4.0.0.67 / neues Kleid
 // aN / 29.12.2023 / 4.0.0.68 / einige Fixis
 // aN / 09.01.2024 / 4.0.0.71 / TimeToEvent (hoffentlich) korrigiert
+// aN / 09.01.2024 / 4.0.0.72 / Ini - lesen und schreiben verbessert
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -1339,7 +1340,7 @@ void SaveRect(void)
     if (f != NULL)
     {
         // Alarm speichern
-        wt[0]=(wochentag[0]=='\0')?'_':wochentag[0];
+        wt[0]=(wochentag[0]==0  )?'_':wochentag[0];
         wt[0]=(wochentag[0]==' ')?'_':wochentag[0];
         wt[1]=(wochentag[1]==' ')?'_':wochentag[1];
         sprintf(hStr, "%2s-%02d:%02d:%02d\n", wt, EZ.wHour, EZ.wMinute, EZ.wSecond);
@@ -1368,6 +1369,7 @@ void SaveRect(void)
             ereignis *e = &ereignisse[i];
             wt[0]=(e->wt[0]==' ')?'_':e->wt[0];
             wt[1]=(e->wt[1]==' ')?'_':e->wt[1];
+            wt[0]=(e->wt[0]==0  )?'_':e->wt[0];
             fprintf(f, "%2s-%02d:%02d:%02d,%s\n",wt,e->std,e->min,e->sec,trim(e->grund));
         }
         fclose(f);
@@ -1494,11 +1496,23 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
             int h,m,s;
             int x;
             ereignis *e = &ereignisse[i];
-            x = fscanf(f,"%2s-%d:%d:%d,",e->wt,&h,&m,&s);
-            fgets(e->grund,100,f);
+            fgets(hStr,200,f);
+            if (strncmp(hStr,"  ",2) == 0)
+            {
+                x = sscanf(hStr,"  -%d:%d:%d,",&h,&m,&s);
+
+                e->wt[0] = ' ';
+                e->wt[1] = ' ';
+                e->wt[2] = 0;
+            }
+            else
+            {
+                x = sscanf(hStr,"%2s-%d:%d:%d,",e->wt,&h,&m,&s);
+            }
             e->std = (char)h;
             e->min = (char)m;
             e->sec = (char)s;
+            strcpy(e->grund,&hStr[12]);
             dotrim(e->grund);
             e->wt[0]=(e->wt[0]=='_')?' ':e->wt[0];
             e->wt[1]=(e->wt[1]=='_')?' ':e->wt[1];
@@ -2359,6 +2373,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                             e->min = 0;
                             e->sec = 0;
                             e->grund[0] = 0;
+                            continue;
                         }
                         strlwr(hStr+1);
                         strncpy(e->wt,hStr,2);
