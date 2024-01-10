@@ -75,6 +75,7 @@
 // aN / 29.12.2023 / 4.0.0.68 / einige Fixis
 // aN / 09.01.2024 / 4.0.0.71 / TimeToEvent (hoffentlich) korrigiert
 // aN / 09.01.2024 / 4.0.0.72 / Ini - lesen und schreiben verbessert
+// aN / 10.01.2024 / 4.0.0.73 / neue Kleider (celeste)
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
