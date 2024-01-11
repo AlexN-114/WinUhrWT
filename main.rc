@@ -68,8 +68,8 @@ FONT 8, "MS Sans Serif", 0, 0, 1
 }
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 4,0,0,72
-PRODUCTVERSION 4,0,0,72
+FILEVERSION 4,0,0,73
+PRODUCTVERSION 4,0,0,73
 FILEFLAGSMASK 0x3F
 FILEFLAGS 0x0
 FILEOS VOS__WINDOWS32
@@ -83,12 +83,12 @@ FILESUBTYPE VFT2_UNKNOWN
       VALUE "Comments", "Eine kleine Windows-Uhr\0"
       VALUE "CompanyName", "/-\. /\/. - Software\0"
       VALUE "FileDescription", "Anzeige der Uhrzeit mit mehrfachen, wöchentlichen Ereignissen (digital,analog,gemischt)\0"
-      VALUE "FileVersion", "4.0.0.72\0"
+      VALUE "FileVersion", "4.0.0.73\0"
       VALUE "InternalName", "WinUhrWT\0"
       VALUE "LegalCopyright", "Alexander NEUMEISTER © 2007-2023\0"
       VALUE "OriginalFilename", "WinUhrWT.exe\0"
       VALUE "ProductName", "WinUhrWT\0"
-      VALUE "ProductVersion", "4.0.0.72\0"
+      VALUE "ProductVersion", "4.0.0.73\0"
     }
   }
   BLOCK "VarFileInfo"
