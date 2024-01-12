@@ -85,7 +85,7 @@ FILESUBTYPE VFT2_UNKNOWN
       VALUE "FileDescription", "Anzeige der Uhrzeit mit mehrfachen, wöchentlichen Ereignissen (digital,analog,gemischt)\0"
       VALUE "FileVersion", "4.0.0.73\0"
       VALUE "InternalName", "WinUhrWT\0"
-      VALUE "LegalCopyright", "Alexander NEUMEISTER © 2007-2023\0"
+      VALUE "LegalCopyright", "Alexander NEUMEISTER © 2007-2024\0"
       VALUE "OriginalFilename", "WinUhrWT.exe\0"
       VALUE "ProductName", "WinUhrWT\0"
       VALUE "ProductVersion", "4.0.0.73\0"
