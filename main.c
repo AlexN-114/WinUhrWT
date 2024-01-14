@@ -76,6 +76,8 @@
 // aN / 09.01.2024 / 4.0.0.71 / TimeToEvent (hoffentlich) korrigiert
 // aN / 09.01.2024 / 4.0.0.72 / Ini - lesen und schreiben verbessert
 // aN / 10.01.2024 / 4.0.0.73 / neue Kleider (celeste)
+// aN / 12.01.2024 / 4.0.0.74 / "Wt" fürs Wochenende korrigiert
+// aN / 14.01.2024 / 4.0.0.75 / AdjustWT
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -153,6 +155,7 @@ void SetColors(HWND hwndCtl, HDC wParam);
 HBRUSH SetBkfColor(COLORREF TxtColr, COLORREF BkColr, HDC hdc);
 void SaveRect(void);
 void CalcRestZeit(SYSTEMTIME j, SYSTEMTIME e, SYSTEMTIME *r);
+char *dotrim(char *string);
 void AddTime(int diff);
 
 /** Global variables ********************************************************/
@@ -304,6 +307,10 @@ int TimeToEvent(char *wt, int h, int m, int s, ereignis *e)
                 if(ste > sts)
                     break;
             }
+            if (6 == i)
+            {
+                ste -= 5 * 25 * 60 * 60;
+            }
             break;
         case 'We':
             if(ste > sts)
@@ -313,6 +320,12 @@ int TimeToEvent(char *wt, int h, int m, int s, ereignis *e)
                 break;
             ste += 1 * 24 * 60 * 60;
             break;
+        case '  ':
+            while(sts > ste)
+            {
+                ste += 24 * 60 * 60;
+            }
+            break;
         default:
             break;
     }
@@ -321,6 +334,36 @@ int TimeToEvent(char *wt, int h, int m, int s, ereignis *e)
         res += 7 * 24 * 60 * 60;
 
     return res % (7 * 24 * 60 * 60);
+}
+
+//****************************************************************************
+//  Adjust WT
+//****************************************************************************
+char* AdjustWT(char *wt)
+{
+    int i;
+    int found=0;
+
+    dotrim(wt);
+    strupr(wt+0);
+    strlwr(wt+1);
+    wt[2]=0;
+    
+    for(i=0; i<NELEMS(wota);i++)
+    {
+        if (strcmp(wt,wota[i]) == 0)
+        {
+            found = 1;
+            break;
+        }
+    }
+
+    if (!found)
+    {
+        wt[0] = ' ';
+        wt[1] = ' ';
+    }
+    return wt;
 }
 
 //****************************************************************************
@@ -2107,9 +2150,8 @@ static LRESULT CALLBACK DlgProcEdit(HWND hwndEDlg, UINT uMsg, WPARAM wParam, LPA
                     GetDlgItemText(hwndEDlg, IDD_EDIT_GRUND, alarmgrund, 100);
                     dotrim(alarmgrund);
                     GetDlgItemText(hwndEDlg, IDD_EDIT_WOTA, wochentag, 3);
-                    dotrim(wochentag);
-                    strupr(wochentag);
-                    strlwr(wochentag + 1);
+                    AdjustWT(wochentag);
+                    SaveRect();
 
                     EndDialog(hwndEDlg, TRUE);
                     return TRUE;
@@ -2265,9 +2307,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                     GetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund, 100);
                     dotrim(alarmgrund);
                     GetDlgItemText(hwndDlg, IDD_WOCHENTAG, hStr, 3);
-                    dotrim(hStr);
-                    strupr(hStr);
-                    strlwr(hStr+1);
+                    AdjustWT(hStr);
                     strncpy(wochentag,hStr,2);
 
                     // Liste lesen
@@ -2294,7 +2334,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                             e->grund[0] = 0;
                             continue;
                         }
-                        strlwr(hStr+1);
+                        AdjustWT(hStr);
                         strncpy(e->wt,hStr,2);
                         //dotrim(e->grund);
                     }
@@ -2334,9 +2374,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                     GetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund, 100);
                     dotrim(alarmgrund);
                     GetDlgItemText(hwndDlg, IDD_WOCHENTAG, hStr, 3);
-                    dotrim(hStr);
-                    strupr(hStr);
-                    strlwr(hStr+1);
+                    AdjustWT(hStr);
                     strncpy(wochentag,hStr,2);
                     SetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund);
                     SetDlgItemText(hwndDlg, IDD_WOCHENTAG, wochentag);
@@ -2366,6 +2404,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                         e->sec = (char)(s%60);
                         GetDlgItemText(hwndDlg,IDD_EVENT_01+i*2,e->grund,100);
                         GetDlgItemText(hwndDlg,IDD_WT_01+i,hStr,100);
+                        dotrim(hStr);
                         strupr(hStr);
                         if (strchr(hStr,'X')!=NULL)
                         {
@@ -2376,7 +2415,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                             e->grund[0] = 0;
                             continue;
                         }
-                        strlwr(hStr+1);
+                        AdjustWT(hStr);
                         strncpy(e->wt,hStr,2);
                         //dotrim(e->grund);
                     }
@@ -2406,6 +2445,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                         e->sec = (char)(s%60);
                         GetDlgItemText(hwndDlg,IDD_EVENT_01+i*2,e->grund,100);
                         GetDlgItemText(hwndDlg,IDD_WT_01+i,hStr,100);
+                        dotrim(hStr);
                         strupr(hStr);
                         if (strchr(hStr,'X')!=NULL)
                         {
@@ -2416,7 +2456,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                             e->grund[0] = 0;
                             continue;
                         }
-                        strlwr(hStr+1);
+                        AdjustWT(hStr);
                         strncpy(e->wt,hStr,2);
                         //dotrim(e->grund);
                     }
