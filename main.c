@@ -78,7 +78,8 @@
 // aN / 10.01.2024 / 4.0.0.73 / neue Kleider (celeste)
 // aN / 12.01.2024 / 4.0.0.74 / "Wt" fürs Wochenende korrigiert
 // aN / 14.01.2024 / 4.0.0.75 / AdjustWT
-// aN / 16.01.2024 / 4.0.0.75 / Statusanzeige bei Ton ein/aus
+// aN / 16.01.2024 / 4.0.0.76 / Statusanzeige bei Ton ein/aus
+// aN / 20.01.2024 / 4.0.0.77 / Wt hoffentlich korrigiert
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -302,15 +303,16 @@ int TimeToEvent(char *wt, int h, int m, int s, ereignis *e)
             ste += 6 * 24 * 60 * 60;
             break;
         case 'Wt':
+            ste += 24 * 60 * 60;
             for(i = 1; i <= 5; i++)
             {
-                ste += 24 * 60 * 60;
                 if(ste > sts)
                     break;
+                ste += 24 * 60 * 60;
             }
             if (6 == i)
             {
-                ste -= 5 * 25 * 60 * 60;
+                ste += 2 * 24 * 60 * 60;
             }
             break;
         case 'We':
