@@ -78,6 +78,7 @@
 // aN / 10.01.2024 / 4.0.0.73 / neue Kleider (celeste)
 // aN / 12.01.2024 / 4.0.0.74 / "Wt" fürs Wochenende korrigiert
 // aN / 14.01.2024 / 4.0.0.75 / AdjustWT
+// aN / 16.01.2024 / 4.0.0.75 / Statusanzeige bei Ton ein/aus
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -324,7 +325,7 @@ int TimeToEvent(char *wt, int h, int m, int s, ereignis *e)
             while(sts > ste)
             {
                 ste += 24 * 60 * 60;
-            }
+    }
             break;
         default:
             break;
@@ -1923,6 +1924,7 @@ static LRESULT CALLBACK DlgProcMain(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                     CheckMenuItem(uhren[1].hSMenu, IDM_NOSOUND, sound_off?MF_CHECKED:MF_UNCHECKED);
                     CheckMenuItem(uhren[2].hSMenu, IDM_NOSOUND, sound_off?MF_CHECKED:MF_UNCHECKED);
                     CheckMenuItem(hPopupMenu, IDM_NOSOUND, sound_off?MF_CHECKED:MF_UNCHECKED);
+                    DialogBox(NULL, MAKEINTRESOURCE(DLG_STATUS), hwndDlg, (DLGPROC)DlgProcStatus);
                     return TRUE;
 
                 case IDM_NEXT:
@@ -2107,7 +2109,7 @@ static LRESULT CALLBACK DlgProcEdit(HWND hwndEDlg, UINT uMsg, WPARAM wParam, LPA
     int items;
     int h,m,s;
 
-    switch(uMsg)
+    switch (uMsg)
     {
         case WM_INITDIALOG:
             sprintf(hStr, "%02d:%02d:%02d", EZ.wHour, EZ.wMinute, EZ.wSecond);
@@ -2117,7 +2119,7 @@ static LRESULT CALLBACK DlgProcEdit(HWND hwndEDlg, UINT uMsg, WPARAM wParam, LPA
             return TRUE;
 
         case WM_COMMAND:
-            switch(GET_WM_COMMAND_ID(wParam, lParam))
+            switch (GET_WM_COMMAND_ID(wParam, lParam))
             {
                 case IDOK:
                     GetDlgItemText(hwndEDlg, IDD_EDIT_ZEIT, hStr, 99);
@@ -2126,13 +2128,13 @@ static LRESULT CALLBACK DlgProcEdit(HWND hwndEDlg, UINT uMsg, WPARAM wParam, LPA
                     switch(items)
                     {
                         case 3:
-                            EZ.wHour = h % 24;
+                            EZ.wHour   = h % 24;
                             EZ.wMinute = m % 60;
                             EZ.wSecond = s % 60;
                             erreicht = 0;
                             break;
                         case 2:
-                            EZ.wHour = h % 24;
+                            EZ.wHour   = h % 24;
                             EZ.wMinute = m % 60;
                             EZ.wSecond = 0;
                             erreicht = 0;
