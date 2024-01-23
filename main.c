@@ -80,6 +80,7 @@
 // aN / 14.01.2024 / 4.0.0.75 / AdjustWT
 // aN / 16.01.2024 / 4.0.0.76 / Statusanzeige bei Ton ein/aus
 // aN / 20.01.2024 / 4.0.0.77 / Wt hoffentlich korrigiert
+// aN / 23.01.2024 / 4.0.0.78 / GetList()/SetList()
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -159,6 +160,8 @@ void SaveRect(void);
 void CalcRestZeit(SYSTEMTIME j, SYSTEMTIME e, SYSTEMTIME *r);
 char *dotrim(char *string);
 void AddTime(int diff);
+void GetList(HWND hWnd);
+void SetList(HWND hWnd);
 
 /** Global variables ********************************************************/
 
@@ -351,7 +354,7 @@ char* AdjustWT(char *wt)
     strupr(wt+0);
     strlwr(wt+1);
     wt[2]=0;
-    
+
     for(i=0; i<NELEMS(wota);i++)
     {
         if (strcmp(wt,wota[i]) == 0)
@@ -367,6 +370,100 @@ char* AdjustWT(char *wt)
         wt[1] = ' ';
     }
     return wt;
+}
+
+//****************************************************************************
+//  GetList
+//****************************************************************************
+void GetList(HWND hWnd)
+{
+    char hStr[100];
+    int items;
+    int h,m,s;
+
+    // Alarm lesen
+    GetDlgItemText(hWnd, IDD_ZEIT_AKT, hStr, 100);
+    items = sscanf(hStr, "%d:%d:%d", &h, &m, &s);
+    // eine Einfache Syntaxprüfung der Eingabe  ** aN 09.08.2023
+    switch(items)
+    {
+    case 3:
+        EZ.wHour = h % 24;
+        EZ.wMinute = m % 60;
+        EZ.wSecond = s % 60;
+        erreicht = 0;
+        break;
+    case 2:
+        EZ.wHour = h % 24;
+        EZ.wMinute = m % 60;
+        EZ.wSecond = 0;
+        erreicht = 0;
+        break;
+    case 1:
+        GetLocalTime(&EZ);
+        EZ.wSecond = 0;
+        AddTime(h);
+        erreicht = 0;
+        break;
+    default:
+        break;
+    }
+
+    GetDlgItemText(hWnd, IDD_EVENT_AKT, alarmgrund, 100);
+    dotrim(alarmgrund);
+    GetDlgItemText(hWnd, IDD_WOCHENTAG, hStr, 3);
+    AdjustWT(hStr);
+    strncpy(wochentag, hStr, 2);
+
+    // Liste lesen
+    for(int i = 0; i < 10; i++)
+    {
+        ereignis * e = &ereignisse[i];
+
+        memset(e, 0, sizeof(ereignis));
+        GetDlgItemText(hWnd, IDD_ZEIT_01 + i * 2, hStr, 100);
+        sscanf(hStr, "%d:%d:%d", &h, &m, &s);
+        e->std = (char)(h % 24);
+        e->min = (char)(m % 60);
+        e->sec = (char)(s % 60);
+        GetDlgItemText(hWnd, IDD_EVENT_01 + i * 2, e->grund, 100);
+        GetDlgItemText(hWnd, IDD_WT_01 + i, hStr, 100);
+        dotrim(hStr);
+        strupr(hStr);
+        if(strchr(hStr, 'X') != NULL)
+        {
+            strcpy(e->wt, "  ");
+            e->std = 0;
+            e->min = 0;
+            e->sec = 0;
+            e->grund[0] = 0;
+            continue;
+        }
+        AdjustWT(hStr);
+        strncpy(e->wt, hStr, 2);
+        //dotrim(e->grund);
+    }
+}
+
+//****************************************************************************
+//  SetList
+//****************************************************************************
+void SetList(HWND hWnd)
+{
+    char hStr[100];
+
+    sprintf(hStr, "%02d:%02d:%02d", EZ.wHour, EZ.wMinute, EZ.wSecond);
+    SetDlgItemText(hWnd, IDD_ZEIT_AKT, hStr);
+    SetDlgItemText(hWnd, IDD_EVENT_AKT, alarmgrund);
+    SetDlgItemText(hWnd, IDD_WOCHENTAG, wochentag);
+    for (int i=0; i<10; i++)
+    {
+        ereignis e = ereignisse[i];
+        SetDlgItemText(hWnd, IDD_EVENT_01+2*i, e.grund);
+        sprintf(hStr, "%02d:%02d:%02d", e.std, e.min, e.sec);
+        SetDlgItemText(hWnd, IDD_ZEIT_01+2*i, hStr);
+        SetDlgItemText(hWnd, IDD_WT_01+i, e.wt);
+    }
 }
 
 //****************************************************************************
@@ -2255,228 +2352,41 @@ static LRESULT CALLBACK DlgProcAlarm(HWND hwndADlg, UINT uMsg, WPARAM wParam, LP
 
 static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    char hStr[100];
-    int items;
-    int h,m,s;
-
     switch (uMsg)
     {
         case WM_INITDIALOG:
-            sprintf(hStr, "%02d:%02d:%02d", EZ.wHour, EZ.wMinute, EZ.wSecond);
-            SetDlgItemText(hwndDlg, IDD_ZEIT_AKT, hStr);
-            SetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund);
-            SetDlgItemText(hwndDlg, IDD_WOCHENTAG, wochentag);
-            for (int i=0; i<10; i++)
-            {
-                ereignis e = ereignisse[i];
-                SetDlgItemText(hwndDlg, IDD_EVENT_01+2*i, e.grund);
-                sprintf(hStr, "%02d:%02d:%02d", e.std, e.min, e.sec);
-                SetDlgItemText(hwndDlg, IDD_ZEIT_01+2*i, hStr);
-                SetDlgItemText(hwndDlg, IDD_WT_01+i, e.wt);
-            }
+            SetList(hwndDlg);
             return TRUE;
 
         case WM_COMMAND:
             switch (GET_WM_COMMAND_ID(wParam, lParam))
             {
                 case IDOK:
-                    // Alarm lesen
-                    GetDlgItemText(hwndDlg, IDD_ZEIT_AKT, hStr, 100);
-                    items=sscanf(hStr, "%d:%d:%d", &h, &m, &s);
-                    // eine Einfache Syntaxprüfung der Eingabe  ** aN 09.08.2023
-                    switch(items)
-                    {
-                        case 3:
-                            EZ.wHour   = h % 24;
-                            EZ.wMinute = m % 60;
-                            EZ.wSecond = s % 60;
-                            erreicht = 0;
-                            break;
-                        case 2:
-                            EZ.wHour   = h % 24;
-                            EZ.wMinute = m % 60;
-                            EZ.wSecond = 0;
-                            erreicht = 0;
-                            break;
-                        case 1:
-                            GetLocalTime(&EZ);
-                            EZ.wSecond = 0;
-                            AddTime(h);
-                            erreicht = 0;
-                            break;
-                        default:
-                            break;
-                    }
-
-                    GetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund, 100);
-                    dotrim(alarmgrund);
-                    GetDlgItemText(hwndDlg, IDD_WOCHENTAG, hStr, 3);
-                    AdjustWT(hStr);
-                    strncpy(wochentag,hStr,2);
-
-                    // Liste lesen
-                    for (int i=0; i<10; i++)
-                    {
-                        ereignis *e = &ereignisse[i];
-
-                        memset(e,0,sizeof(ereignis));
-                        GetDlgItemText(hwndDlg,IDD_ZEIT_01+i*2,hStr,100);
-                        sscanf(hStr,"%d:%d:%d",&h,&m,&s);
-                        e->std = (char)(h%24);
-                        e->min = (char)(m%60);
-                        e->sec = (char)(s%60);
-                        GetDlgItemText(hwndDlg,IDD_EVENT_01+i*2,e->grund,100);
-                        GetDlgItemText(hwndDlg,IDD_WT_01+i,hStr,100);
-                        dotrim(hStr);
-                        strupr(hStr);
-                        if (strchr(hStr,'X')!=NULL)
-                        {
-                            strcpy(e->wt,"  ");
-                            e->std = 0;
-                            e->min = 0;
-                            e->sec = 0;
-                            e->grund[0] = 0;
-                            continue;
-                        }
-                        AdjustWT(hStr);
-                        strncpy(e->wt,hStr,2);
-                        //dotrim(e->grund);
-                    }
+                    GetList(hwndDlg);
                     // und speichern
                     SaveRect();
                     EndDialog(hwndDlg, TRUE);
                     return TRUE;
 
                 case IDD_IN_LISTE:
-                    GetDlgItemText(hwndDlg, IDD_ZEIT_AKT, hStr, 100);
-                    items=sscanf(hStr, "%d:%d:%d", &h, &m, &s);
-                    // eine Einfache Syntaxprüfung der Eingabe  ** aN 09.08.2023
-                    switch(items)
-                    {
-                        case 3:
-                            EZ.wHour   = h % 24;
-                            EZ.wMinute = m % 60;
-                            EZ.wSecond = s % 60;
-                            erreicht = 0;
-                            break;
-                        case 2:
-                            EZ.wHour   = h % 24;
-                            EZ.wMinute = m % 60;
-                            EZ.wSecond = 0;
-                            erreicht = 0;
-                            break;
-                        case 1:
-                            GetLocalTime(&EZ);
-                            EZ.wSecond = 0;
-                            AddTime(h);
-                            erreicht = 0;
-                            break;
-                        default:
-                            break;
-                    }
-
-                    GetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund, 100);
-                    dotrim(alarmgrund);
-                    GetDlgItemText(hwndDlg, IDD_WOCHENTAG, hStr, 3);
-                    AdjustWT(hStr);
-                    strncpy(wochentag,hStr,2);
-                    SetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund);
-                    SetDlgItemText(hwndDlg, IDD_WOCHENTAG, wochentag);
+                    GetList(hwndDlg);
                     AktEvent2Liste();
-                    for (int i=0; i<10; i++)
-                    {
-                        ereignis e = ereignisse[i];
-                        SetDlgItemText(hwndDlg, IDD_EVENT_01+2*i, e.grund);
-                        sprintf(hStr, "%02d:%02d:%02d", e.std, e.min, e.sec);
-                        SetDlgItemText(hwndDlg, IDD_ZEIT_01+2*i, hStr);
-                        SetDlgItemText(hwndDlg, IDD_WT_01+i, e.wt);
-                    }
+                    SetList(hwndDlg);
                     SaveRect();
                     return TRUE;
 
                 case IDD_SORT_LISTE:
-                    // Liste lesen
-                    for (int i=0; i<10; i++)
-                    {
-                        ereignis *e = &ereignisse[i];
-
-                        memset(e,0,sizeof(ereignis));
-                        GetDlgItemText(hwndDlg,IDD_ZEIT_01+i*2,hStr,100);
-                        sscanf(hStr,"%d:%d:%d",&h,&m,&s);
-                        e->std = (char)(h%24);
-                        e->min = (char)(m%60);
-                        e->sec = (char)(s%60);
-                        GetDlgItemText(hwndDlg,IDD_EVENT_01+i*2,e->grund,100);
-                        GetDlgItemText(hwndDlg,IDD_WT_01+i,hStr,100);
-                        dotrim(hStr);
-                        strupr(hStr);
-                        if (strchr(hStr,'X')!=NULL)
-                        {
-                            strcpy(e->wt,"  ");
-                            e->std = 0;
-                            e->min = 0;
-                            e->sec = 0;
-                            e->grund[0] = 0;
-                            continue;
-                        }
-                        AdjustWT(hStr);
-                        strncpy(e->wt,hStr,2);
-                        //dotrim(e->grund);
-                    }
+                    GetList(hwndDlg);
                     SortList();
-                    for (int i=0; i<10; i++)
-                    {
-                        ereignis e = ereignisse[i];
-                        SetDlgItemText(hwndDlg, IDD_EVENT_01+2*i, e.grund);
-                        sprintf(hStr, "%02d:%02d:%02d", e.std, e.min, e.sec);
-                        SetDlgItemText(hwndDlg, IDD_ZEIT_01+2*i, hStr);
-                        SetDlgItemText(hwndDlg, IDD_WT_01+i, e.wt);
-                    }
+                    SetList(hwndDlg);
                     SaveRect();
                     return TRUE;
 
                 case IDD_NEXT_LISTE:
                     // Liste lesen
-                    for (int i=0; i<10; i++)
-                    {
-                        ereignis *e = &ereignisse[i];
-
-                        memset(e,0,sizeof(ereignis));
-                        GetDlgItemText(hwndDlg,IDD_ZEIT_01+i*2,hStr,100);
-                        sscanf(hStr,"%d:%d:%d",&h,&m,&s);
-                        e->std = (char)(h%24);
-                        e->min = (char)(m%60);
-                        e->sec = (char)(s%60);
-                        GetDlgItemText(hwndDlg,IDD_EVENT_01+i*2,e->grund,100);
-                        GetDlgItemText(hwndDlg,IDD_WT_01+i,hStr,100);
-                        dotrim(hStr);
-                        strupr(hStr);
-                        if (strchr(hStr,'X')!=NULL)
-                        {
-                            strcpy(e->wt,"  ");
-                            e->std = 0;
-                            e->min = 0;
-                            e->sec = 0;
-                            e->grund[0] = 0;
-                            continue;
-                        }
-                        AdjustWT(hStr);
-                        strncpy(e->wt,hStr,2);
-                        //dotrim(e->grund);
-                    }
+                    GetList(hwndDlg);
                     SetNextEvent();
-                    sprintf(hStr, "%02d:%02d:%02d", EZ.wHour, EZ.wMinute, EZ.wSecond);
-                    SetDlgItemText(hwndDlg, IDD_ZEIT_AKT, hStr);
-                    SetDlgItemText(hwndDlg, IDD_EVENT_AKT, alarmgrund);
-                    SetDlgItemText(hwndDlg, IDD_WOCHENTAG, wochentag);
-                    for (int i=0; i<10; i++)
-                    {
-                        ereignis e = ereignisse[i];
-                        SetDlgItemText(hwndDlg, IDD_EVENT_01+2*i, e.grund);
-                        sprintf(hStr, "%02d:%02d:%02d", e.std, e.min, e.sec);
-                        SetDlgItemText(hwndDlg, IDD_ZEIT_01+2*i, hStr);
-                        SetDlgItemText(hwndDlg, IDD_WT_01+i, e.wt);
-                    }
+                    SetList(hwndDlg);
                     SaveRect();
                     return TRUE;
 
