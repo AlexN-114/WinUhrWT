@@ -81,6 +81,7 @@
 // aN / 16.01.2024 / 4.0.0.76 / Statusanzeige bei Ton ein/aus
 // aN / 20.01.2024 / 4.0.0.77 / Wt hoffentlich korrigiert
 // aN / 23.01.2024 / 4.0.0.78 / GetList()/SetList()
+// aN / 27.01.2024 / 4.0.0.78 / Reihenfolge der Zeiger der gr. Uhr ändern
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -1133,6 +1134,54 @@ static HICON CreateBigTimeIcon(HWND hWnd)
     }
     gSekunde = systim.wSecond;
 
+    pt[0].x = pt[0].y = BIGIMAGESIZE / 2;
+
+    // W E C K E R - Zeiger
+    hdc = GetDC(hWnd);
+    mdc = CreateCompatibleDC(hdc);
+
+    /* Bitmap für Vordergrund erzeugen */
+    hBitmap = CreateCompatibleBitmap(hdc, BIGICONSIZE, BIGICONSIZE);
+    FillBitmap(mdc, hBitmap, 0, BIGICONSIZE, (EZ.wHour>=12)?WECKER_COLOR_PM:WECKER_COLOR_AM);
+
+    /* Bitmap für Maske erzeugen */
+    hMaskBitmap = CreateCompatibleBitmap(hdc, BIGICONSIZE, BIGICONSIZE);
+    FillBitmap(mdc, hMaskBitmap, 0, BIGICONSIZE, MASK_COLOR);
+    ReleaseDC(hWnd, hdc);
+    hRetBmp = SelectObject(mdc, hMaskBitmap);
+
+    /* Stundenzeiger zeichnen */
+    index = ((EZ.wHour % 12) * 5) + (EZ.wMinute / 15);
+    flag = index / 15;
+    index %= 15;
+    //index = (((index * 10) / 2) + 5) / 10;
+    ConvBigLinePoint(hx[index], hy[index], &pt[1], flag);
+    hPen = CreatePen(PS_SOLID, 4, (EZ.wHour>=12)?WECKER_COLOR_PM:WECKER_COLOR_AM);
+    SelectObject(mdc, hPen);
+    Polyline(mdc, pt, sizeof(pt) / sizeof(POINT));
+    DeleteObject(hPen);
+
+    /* Maske setzen */
+    FillBitmap(mdc, hMaskBitmap, BIGIMAGESIZE / 2, BIGIMAGESIZE / 2 + 1, MASK_COLOR);
+
+    /* Wecker Icon zusammen setzen */
+    SelectObject(mdc, hRetBmp);
+    DeleteDC(mdc);
+    IconList = ImageList_Create(BIGICONSIZE, BIGICONSIZE, ILC_COLOR8 | ILC_MASK, 4, 5);
+
+    ImageList_AddIcon(IconList, hBigIcon);
+
+    SelectObject(mdc, hRetBmp);
+    DeleteDC(mdc);
+
+    ImageList_Add(IconList, hBitmap, hMaskBitmap);
+    DeleteObject(hBitmap);
+    DeleteObject(hMaskBitmap);
+
+    //hIcon = ImageList_GetIcon(mIconList, 0, ILD_NORMAL);
+    //ImageList_Destroy(mIconList);
+    //ImageList_Destroy(IconList);
+
     // S T U N D E N - Z e i g e r
     hdc = GetDC(hWnd);
     mdc = CreateCompatibleDC(hdc);
@@ -1148,8 +1197,6 @@ static HICON CreateBigTimeIcon(HWND hWnd)
     hRetBmp = SelectObject(mdc, hMaskBitmap);
 
 
-    pt[0].x = pt[0].y = BIGIMAGESIZE / 2;
-
     /* Stundenzeiger zeichnen */
     index = ((systim.wHour % 12) * 5) + (systim.wMinute / 15);
     flag = index / 15;
@@ -1161,10 +1208,6 @@ static HICON CreateBigTimeIcon(HWND hWnd)
     SelectObject(mdc, hPen);
     Polyline(mdc, pt, sizeof(pt) / sizeof(POINT));
     DeleteObject(hPen);
-
-    /* Icon zusammen setzen */
-    IconList = ImageList_Create(BIGICONSIZE, BIGICONSIZE, ILC_COLOR8 | ILC_MASK, 4, 5);
-    ImageList_AddIcon(IconList, hBigIcon);
 
     /* GDI  */
     SelectObject(mdc, hRetBmp);
@@ -1206,52 +1249,6 @@ static HICON CreateBigTimeIcon(HWND hWnd)
     DeleteObject(hBitmap);
     DeleteObject(hMaskBitmap);
 
-    // W E C K E R - Zeiger
-    hdc = GetDC(hWnd);
-    mdc = CreateCompatibleDC(hdc);
-
-    /* Bitmap für Vordergrund erzeugen */
-    hBitmap = CreateCompatibleBitmap(hdc, BIGICONSIZE, BIGICONSIZE);
-    FillBitmap(mdc, hBitmap, 0, BIGICONSIZE, (EZ.wHour>=12)?WECKER_COLOR_PM:WECKER_COLOR_AM);
-
-    /* Bitmap für Maske erzeugen */
-    hMaskBitmap = CreateCompatibleBitmap(hdc, BIGICONSIZE, BIGICONSIZE);
-    FillBitmap(mdc, hMaskBitmap, 0, BIGICONSIZE, MASK_COLOR);
-    ReleaseDC(hWnd, hdc);
-    hRetBmp = SelectObject(mdc, hMaskBitmap);
-
-    /* Stundenzeiger zeichnen */
-    index = ((EZ.wHour % 12) * 5) + (EZ.wMinute / 15);
-    flag = index / 15;
-    index %= 15;
-    //index = (((index * 10) / 2) + 5) / 10;
-    ConvBigLinePoint(hx[index], hy[index], &pt[1], flag);
-    hPen = CreatePen(PS_SOLID, 4, (EZ.wHour>=12)?WECKER_COLOR_PM:WECKER_COLOR_AM);
-    SelectObject(mdc, hPen);
-    Polyline(mdc, pt, sizeof(pt) / sizeof(POINT));
-    DeleteObject(hPen);
-
-    /* Maske setzen */
-    FillBitmap(mdc, hMaskBitmap, BIGIMAGESIZE / 2, BIGIMAGESIZE / 2 + 1, MASK_COLOR);
-
-    /* Wecker Icon zusammen setzen */
-    SelectObject(mdc, hRetBmp);
-    DeleteDC(mdc);
-    ImageList_Add(IconList, hBitmap, hMaskBitmap);
-    DeleteObject(hBitmap);
-    DeleteObject(hMaskBitmap);
-
-    // "Mergen" der Icons
-    mIconList = ImageList_Merge(IconList, 0, IconList, 1, 0, 0);  // Originalicon + Stundenzeiger
-    tIconList = ImageList_Merge(mIconList, 0, IconList, 2, 0, 0);  // + Minutenzeiger
-    ImageList_Destroy(mIconList);
-    mIconList = ImageList_Merge(tIconList, 0, IconList, 3, 0, 0);  // Wecker
-    ImageList_Destroy(tIconList);
-
-    //hIcon = ImageList_GetIcon(mIconList, 0, ILD_NORMAL);
-    //ImageList_Destroy(mIconList);
-    //ImageList_Destroy(IconList);
-
     // S E K U N D E N - Z e i g e r
     hdc = GetDC(hWnd);
     mdc = CreateCompatibleDC(hdc);
@@ -1289,6 +1286,11 @@ static HICON CreateBigTimeIcon(HWND hWnd)
     DeleteObject(hMaskBitmap);
 
     // "Mergen" der Icons
+    mIconList = ImageList_Merge(IconList, 0, IconList, 1, 0, 0);  // Originalicon + Stundenzeiger
+    tIconList = ImageList_Merge(mIconList, 0, IconList, 2, 0, 0);  // + Minutenzeiger
+    ImageList_Destroy(mIconList);
+    mIconList = ImageList_Merge(tIconList, 0, IconList, 3, 0, 0);  // Wecker
+    ImageList_Destroy(tIconList);
     tIconList = ImageList_Merge(mIconList, 0, IconList, 4, 0, 0);  // + Minutenzeiger
     ImageList_Destroy(mIconList);
 
