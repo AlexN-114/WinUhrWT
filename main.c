@@ -81,7 +81,8 @@
 // aN / 16.01.2024 / 4.0.0.76 / Statusanzeige bei Ton ein/aus
 // aN / 20.01.2024 / 4.0.0.77 / Wt hoffentlich korrigiert
 // aN / 23.01.2024 / 4.0.0.78 / GetList()/SetList()
-// aN / 27.01.2024 / 4.0.0.78 / Reihenfolge der Zeiger der gr. Uhr ändern
+// aN / 27.01.2024 / 4.0.0.79 / Reihenfolge der Zeiger der gr. Uhr ändern
+// aN / 29.01.2024 / 4.0.0.80 / Infofenster per Tastendruck quittierbar
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -2418,6 +2419,7 @@ static LRESULT CALLBACK DlgProcInfo(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
             SetDlgItemText(hwndDlg, IDD_TEXT_INFO, outstr);
             return TRUE;
 
+        case WM_COMMAND:
         case WM_CLOSE:
         case WM_LBUTTONUP:
         case WM_LBUTTONDBLCLK:
