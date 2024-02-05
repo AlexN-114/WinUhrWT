@@ -83,6 +83,8 @@
 // aN / 23.01.2024 / 4.0.0.78 / GetList()/SetList()
 // aN / 27.01.2024 / 4.0.0.79 / Reihenfolge der Zeiger der gr. Uhr ändern
 // aN / 29.01.2024 / 4.0.0.80 / Infofenster per Tastendruck quittierbar
+// aN / 05.02.2024 / 4.0.1.81 / Hide und Top speichern
+
 
 /*
  * Either define WIN32_LEAN_AND_MEAN, or one or more of NOCRYPT,
@@ -160,8 +162,8 @@ void SetColors(HWND hwndCtl, HDC wParam);
 HBRUSH SetBkfColor(COLORREF TxtColr, COLORREF BkColr, HDC hdc);
 void SaveRect(void);
 void CalcRestZeit(SYSTEMTIME j, SYSTEMTIME e, SYSTEMTIME *r);
-char *dotrim(char *string);
 void AddTime(int diff);
+char *dotrim(char *string);
 void GetList(HWND hWnd);
 void SetList(HWND hWnd);
 
@@ -696,7 +698,7 @@ void SetNextEvent(void)
 }
 
 //****************************************************************************
-//  SetNextEvent
+//  AktEvent2Liste()
 //****************************************************************************
 void AktEvent2Liste(void)
 {
@@ -1157,7 +1159,7 @@ static HICON CreateBigTimeIcon(HWND hWnd)
     index %= 15;
     //index = (((index * 10) / 2) + 5) / 10;
     ConvBigLinePoint(hx[index], hy[index], &pt[1], flag);
-    hPen = CreatePen(PS_SOLID, 4, (EZ.wHour>=12)?WECKER_COLOR_PM:WECKER_COLOR_AM);
+    hPen = CreatePen(PS_SOLID, 5, (EZ.wHour>=12)?WECKER_COLOR_PM:WECKER_COLOR_AM);
     SelectObject(mdc, hPen);
     Polyline(mdc, pt, sizeof(pt) / sizeof(POINT));
     DeleteObject(hPen);
@@ -1287,7 +1289,7 @@ static HICON CreateBigTimeIcon(HWND hWnd)
     DeleteObject(hMaskBitmap);
 
     // "Mergen" der Icons
-    mIconList = ImageList_Merge(IconList, 0, IconList, 1, 0, 0);  // Originalicon + Stundenzeiger
+    mIconList = ImageList_Merge( IconList, 0, IconList, 1, 0, 0);  // Originalicon + Stundenzeiger
     tIconList = ImageList_Merge(mIconList, 0, IconList, 2, 0, 0);  // + Minutenzeiger
     ImageList_Destroy(mIconList);
     mIconList = ImageList_Merge(tIconList, 0, IconList, 3, 0, 0);  // Wecker
@@ -1497,17 +1499,20 @@ void SaveRect(void)
         fwrite(hStr, 1, strlen(hStr), f);
 
         // Positionen speichern
-        sprintf(hStr, "%ld,%ld,%ld,%ld\n",
+        sprintf(hStr, "%ld,%ld,%ld,%ld, %d,%d\n",
         uhren[0].rWndDlg.left, uhren[0].rWndDlg.top,
-        uhren[0].rWndDlg.right, uhren[0].rWndDlg.bottom);
+        uhren[0].rWndDlg.right, uhren[0].rWndDlg.bottom,
+        uhren[0].hide, uhren[0].top);
         fwrite(hStr, 1, strlen(hStr), f);
-        sprintf(hStr, "%ld,%ld,%ld,%ld\n",
+        sprintf(hStr, "%ld,%ld,%ld,%ld, %d,%d\n",
         uhren[1].rWndDlg.left, uhren[1].rWndDlg.top,
-        uhren[1].rWndDlg.right, uhren[1].rWndDlg.bottom);
+        uhren[1].rWndDlg.right, uhren[1].rWndDlg.bottom,
+        uhren[1].hide, uhren[1].top);
         fwrite(hStr, 1, strlen(hStr), f);
-        sprintf(hStr, "%ld,%ld,%ld,%ld\n",
+        sprintf(hStr, "%ld,%ld,%ld,%ld, %d,%d\n",
         uhren[2].rWndDlg.left, uhren[2].rWndDlg.top,
-        uhren[2].rWndDlg.right, uhren[2].rWndDlg.bottom);
+        uhren[2].rWndDlg.right, uhren[2].rWndDlg.bottom,
+        uhren[2].hide, uhren[2].top);
         fwrite(hStr, 1, strlen(hStr), f);
 
         // Liste speichern
@@ -1632,7 +1637,9 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
         for (int i = 0; i < 3; i++)
         {
             fgets(hStr, 50, f);
-            if (4 == sscanf(hStr, "%ld,%ld,%ld,%ld", &r.left, &r.top, &r.right, &r.bottom))
+            if (4 <= sscanf(hStr, "%ld,%ld,%ld,%ld, %d,%d",
+                            &r.left, &r.top, &r.right, &r.bottom,
+                            &uhren[i].hide, &uhren[i].top))
             {
                 uhren[i].rWndDlg = r;
             }
@@ -1798,6 +1805,14 @@ static LRESULT CALLBACK DlgProcMain(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
             AppendMenu(uhren[selUhr].hSMenu, MF_STRING, IDM_NOSOUND, "&kein Sound");
 
             AktToolTip();
+
+            CheckMenuItem(hPopupMenu, IDM_HIDEX+selUhr, uhren[selUhr].hide?MF_CHECKED:MF_UNCHECKED);
+            CheckMenuItem(uhren[selUhr].hSMenu, IDM_HIDE, uhren[selUhr].hide?MF_CHECKED:MF_UNCHECKED);
+            ShowWindow(hwndDlg, uhren[selUhr].hide?SW_HIDE:SW_SHOW);
+
+            CheckMenuItem(hPopupMenu, IDM_TOPX+selUhr, uhren[selUhr].top?MF_CHECKED:MF_UNCHECKED);
+            CheckMenuItem(uhren[selUhr].hSMenu, IDM_TOP, uhren[selUhr].top?MF_CHECKED:MF_UNCHECKED);
+            SetWindowPos(hwndDlg, uhren[selUhr].top?HWND_TOPMOST:HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
             SetColors(hwndDlg, (HDC)wParam);
             SetBkfColor(gForegroundColor, gBackgroundColor, (HDC)wParam);
@@ -2071,6 +2086,7 @@ static LRESULT CALLBACK DlgProcMain(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                 if(xx<3)
                 {
                     //TODO
+                    ShowWindow(hwndDlg, uhren[selUhr].hide?SW_HIDE:SW_SHOW);
                     Refresh(hwndDlg);
                     xx++;
                 }
@@ -2365,6 +2381,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
             switch (GET_WM_COMMAND_ID(wParam, lParam))
             {
                 case IDOK:
+                    // Alarm lesen
                     GetList(hwndDlg);
                     // und speichern
                     SaveRect();
@@ -2372,6 +2389,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                     return TRUE;
 
                 case IDD_IN_LISTE:
+                    // Liste lesen
                     GetList(hwndDlg);
                     AktEvent2Liste();
                     SetList(hwndDlg);
@@ -2379,6 +2397,7 @@ static LRESULT CALLBACK DlgProcList(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                     return TRUE;
 
                 case IDD_SORT_LISTE:
+                    // Liste lesen
                     GetList(hwndDlg);
                     SortList();
                     SetList(hwndDlg);
@@ -2451,6 +2470,7 @@ static LRESULT CALLBACK DlgProcStatus(HWND hwndDlg, UINT uMsg, WPARAM wParam, LP
             EndDialog(hwndDlg, 0);
             return TRUE;
 
+        case WM_COMMAND:
         case WM_CLOSE:
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
