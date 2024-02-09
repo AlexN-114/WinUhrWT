@@ -84,6 +84,7 @@
 // aN / 27.01.2024 / 4.0.0.79 / Reihenfolge der Zeiger der gr. Uhr ändern
 // aN / 29.01.2024 / 4.0.0.80 / Infofenster per Tastendruck quittierbar
 // aN / 05.02.2024 / 4.0.1.81 / Hide und Top speichern
+// aN / 09.02.2024 / 4.0.1.82 / Doppelklick aktiviert Liste
 
 
 /*
@@ -2166,7 +2167,7 @@ static LRESULT CALLBACK DlgProcMain(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
             break;
 
         case WM_LBUTTONDBLCLK:
-            DialogBox(ghInstance, MAKEINTRESOURCE(DLG_EDIT), hwndDlg, (DLGPROC)DlgProcEdit);
+            DialogBox(ghInstance, MAKEINTRESOURCE(DLG_EVENTLIST), hwndDlg, (DLGPROC)DlgProcList);
             AktToolTip();
             SaveRect();
             break;
