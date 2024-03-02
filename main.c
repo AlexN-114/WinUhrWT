@@ -85,6 +85,7 @@
 // aN / 29.01.2024 / 4.0.0.80 / Infofenster per Tastendruck quittierbar
 // aN / 05.02.2024 / 4.0.1.81 / Hide und Top speichern
 // aN / 09.02.2024 / 4.0.1.82 / Doppelklick aktiviert Liste
+// aN / 02.03.2024 / 4.0.1.83 / Ini-Name per Parameter I setzen
 
 
 /*
@@ -161,6 +162,7 @@ void AktOutput(HWND hwndDlg);
 void AktToolTip(void);
 void SetColors(HWND hwndCtl, HDC wParam);
 HBRUSH SetBkfColor(COLORREF TxtColr, COLORREF BkColr, HDC hdc);
+void LoadRect(void);
 void SaveRect(void);
 void CalcRestZeit(SYSTEMTIME j, SYSTEMTIME e, SYSTEMTIME *r);
 void AddTime(int diff);
@@ -545,14 +547,28 @@ void GetParams(char *szCmdline)
                 break;
             }
 
-            case 'N':
+            case 'N':   // Set next Event
             case 'n':
                 SetNextEvent();
                 AktToolTip();
                 SaveRect();
                 break;
 
-            case '/': // Spanne
+            case 'I':   // Set ini-file name
+            case 'i':
+                i++;
+                if (szCmdline[i] == '=')
+                    i++;
+                if (szCmdline[i] == ':')
+                    i++;
+                cp = hStr;
+                while ((szCmdline[i] != ' ') && (szCmdline[i] != '\0'))
+                    *(cp++) = szCmdline[i++];
+                *cp = 0;
+                sscanf(hStr, "%s", IniName);
+                break;
+
+            case '/': // Steuerzeichen überlesen
             case '-':
                 //i++;
                 break;
@@ -1474,6 +1490,80 @@ void SetColors(HWND hwndCtl, HDC wParam)
     SetBkMode(wParam, OPAQUE);
 }
 
+// Ini-Datei laden
+void LoadRect(void)
+{
+    RECT r;
+    FILE * f;
+    int wHour, wMinute, wSecond;
+    char hStr[200];
+
+    // Ini-Datei lesen und Werte setzen
+    f = fopen(IniName, "r");
+
+    if (f != NULL)
+    {
+        // Endzeit einlesen
+        fgets(hStr, 50, f);
+        if (4 == sscanf(hStr, "%2s-%d:%d:%d", wochentag, &wHour, &wMinute, &wSecond))
+        {
+            EZ.wHour = wHour % 24;
+            EZ.wMinute = wMinute % 60;
+            EZ.wSecond = wSecond % 60;
+            wochentag[0]=(wochentag[0]==' ')?'_':wochentag[0];
+            wochentag[1]=(wochentag[1]==' ')?'_':wochentag[1];
+
+        }
+
+        // Grund für Alarm lesen
+        fgets(alarmgrund, 100, f);
+        dotrim(alarmgrund);
+
+        // Rechteck einlesen
+        for (int i = 0; i < 3; i++)
+        {
+            fgets(hStr, 50, f);
+            if (4 <= sscanf(hStr, "%ld,%ld,%ld,%ld, %d,%d",
+                            &r.left, &r.top, &r.right, &r.bottom,
+                            &uhren[i].hide, &uhren[i].top))
+            {
+                uhren[i].rWndDlg = r;
+            }
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            int h,m,s;
+            int x;
+            ereignis *e = &ereignisse[i];
+            fgets(hStr,200,f);
+            if (strncmp(hStr,"  ",2) == 0)
+            {
+                x = sscanf(hStr,"  -%d:%d:%d,",&h,&m,&s);
+
+                e->wt[0] = ' ';
+                e->wt[1] = ' ';
+                e->wt[2] = 0;
+            }
+            else
+            {
+                x = sscanf(hStr,"%2s-%d:%d:%d,",e->wt,&h,&m,&s);
+            }
+            e->std = (char)h;
+            e->min = (char)m;
+            e->sec = (char)s;
+            strcpy(e->grund,&hStr[12]);
+            dotrim(e->grund);
+            e->wt[0]=(e->wt[0]=='_')?' ':e->wt[0];
+            e->wt[1]=(e->wt[1]=='_')?' ':e->wt[1];
+        }
+
+        // Datei schließen
+        fclose(f);
+    }
+}
+
+
 //****************************************************************************
 // Speichern des aktuellen Fensters und Endzeit                             **
 //****************************************************************************
@@ -1588,10 +1678,6 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     WNDCLASSEX wcx;
     MSG Msg;
     HANDLE hAccelTable = NULL;
-    int wHour, wMinute, wSecond;
-    char hStr[200];
-    RECT r;
-    FILE * f;
 
     ghInstance = hInstance;
     // Namen für ini ermitteln
@@ -1613,71 +1699,9 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     // LoadLibrary(_T("riched32.dll"));  // Rich Edit v1.0
     // LoadLibrary(_T("riched20.dll"));  // Rich Edit v2.0, v3.0
 
-    // Ini-Datei lesen und Werte setzen
-    f = fopen(IniName, "r");
-
-    if (f != NULL)
-    {
-        // Endzeit einlesen
-        fgets(hStr, 50, f);
-        if (4 == sscanf(hStr, "%2s-%d:%d:%d", wochentag, &wHour, &wMinute, &wSecond))
-        {
-            EZ.wHour = wHour % 24;
-            EZ.wMinute = wMinute % 60;
-            EZ.wSecond = wSecond % 60;
-            wochentag[0]=(wochentag[0]==' ')?'_':wochentag[0];
-            wochentag[1]=(wochentag[1]==' ')?'_':wochentag[1];
-
-        }
-
-        // Grund für Alarm lesen
-        fgets(alarmgrund, 100, f);
-        dotrim(alarmgrund);
-
-        // Rechteck einlesen
-        for (int i = 0; i < 3; i++)
-        {
-            fgets(hStr, 50, f);
-            if (4 <= sscanf(hStr, "%ld,%ld,%ld,%ld, %d,%d",
-                            &r.left, &r.top, &r.right, &r.bottom,
-                            &uhren[i].hide, &uhren[i].top))
-            {
-                uhren[i].rWndDlg = r;
-            }
-        }
-
-        for (int i = 0; i < 10; i++)
-        {
-            int h,m,s;
-            int x;
-            ereignis *e = &ereignisse[i];
-            fgets(hStr,200,f);
-            if (strncmp(hStr,"  ",2) == 0)
-            {
-                x = sscanf(hStr,"  -%d:%d:%d,",&h,&m,&s);
-
-                e->wt[0] = ' ';
-                e->wt[1] = ' ';
-                e->wt[2] = 0;
-            }
-            else
-            {
-                x = sscanf(hStr,"%2s-%d:%d:%d,",e->wt,&h,&m,&s);
-            }
-            e->std = (char)h;
-            e->min = (char)m;
-            e->sec = (char)s;
-            strcpy(e->grund,&hStr[12]);
-            dotrim(e->grund);
-            e->wt[0]=(e->wt[0]=='_')?' ':e->wt[0];
-            e->wt[1]=(e->wt[1]=='_')?' ':e->wt[1];
-        }
-
-        // Datei schließen
-        fclose(f);
-    }
-
     GetParams(lpszCmdLine);
+
+    LoadRect();
 
     /* Get system dialog information */
     wcx.cbSize = sizeof(wcx);

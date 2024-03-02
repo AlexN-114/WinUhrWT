@@ -27,7 +27,7 @@ SIGNFLAGS = -location:CU -store:MY -timeurl:http://timestamp.verisign.com/script
 INCLUDE = $(PellesCDir)\Include\Win;$(PellesCDir)\Include#
 LIB = $(PellesCDir)\Lib\Win;$(PellesCDir)\Lib#
 !elseif "$(POC_PROJECT_MODE)" == "Debug"
-POC_PROJECT_ARGUMENTS = #
+POC_PROJECT_ARGUMENTS = -i=A:\WinUhrWT.ini#
 POC_PROJECT_WORKPATH = .#
 POC_PROJECT_EXECUTOR = #
 POC_PROJECT_ZIPEXTRA = #

@@ -5,6 +5,6 @@
 
 POC_WORKSPACE_VERSION = 1.00
 
-PROJECT = WinUhrWT-32.ppj
 PROJECT = WinUhrWT-64.ppj
+PROJECT = WinUhrWT-32.ppj
 
