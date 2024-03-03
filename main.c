@@ -86,6 +86,7 @@
 // aN / 05.02.2024 / 4.0.1.81 / Hide und Top speichern
 // aN / 09.02.2024 / 4.0.1.82 / Doppelklick aktiviert Liste
 // aN / 02.03.2024 / 4.0.1.83 / Ini-Name per Parameter I setzen
+// aN / 03.03.2024 / 4.0.1.84 / Ini-Name mit Hochkomma und Leerzeichen
 
 
 /*
@@ -481,6 +482,7 @@ void GetParams(char *szCmdline)
     int i = 0;
     char *cp;
     char hStr[200];
+    int flag = 0;
 
     if (szCmdline == NULL)
         return;
@@ -556,16 +558,35 @@ void GetParams(char *szCmdline)
 
             case 'I':   // Set ini-file name
             case 'i':
+                flag = 0;
                 i++;
                 if (szCmdline[i] == '=')
                     i++;
                 if (szCmdline[i] == ':')
                     i++;
-                cp = hStr;
-                while ((szCmdline[i] != ' ') && (szCmdline[i] != '\0'))
-                    *(cp++) = szCmdline[i++];
-                *cp = 0;
-                sscanf(hStr, "%s", IniName);
+                while (szCmdline[i] == ' ')     // Leerezeichen überlesen
+                    i++;
+                if (szCmdline[i] == '"')
+                {
+                    flag = 1;
+                    i++;
+                }
+                if (flag == 1)
+                {
+                    // Name mit Leeerzeichen und umrahmt von Hochkomma "
+                    cp = IniName;
+                    while ((szCmdline[i] != '"') && (szCmdline[i] != '\0'))
+                        *(cp++) = szCmdline[i++];
+                    *cp = 0;
+                }
+                else
+                {
+                    // Name ohne Hochkomma und Leerzeichen
+                    cp = IniName;
+                    while ((szCmdline[i] != ' ') && (szCmdline[i] != '\0'))
+                        *(cp++) = szCmdline[i++];
+                    *cp = 0;
+                }
                 break;
 
             case '/': // Steuerzeichen überlesen
