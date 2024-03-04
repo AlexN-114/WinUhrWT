@@ -1813,7 +1813,7 @@ static LRESULT CALLBACK DlgProcMain(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
                 AppendMenu(hPopupMenu, MF_STRING, IDM_LIST, "Bearbeite &Liste");
                 AppendMenu(hPopupMenu, MF_STRING, IDM_SORT, "&Sortiere Liste");
                 AppendMenu(hPopupMenu, MF_STRING, IDM_NEXT, "&nächstes Ereignis");
-                //AppendMenu(hPopupMenu, MF_STRING | MF_CHECKED, IDM_RESTZEIT, "&Restzeit bei Minimiert");
+              //AppendMenu(hPopupMenu, MF_STRING | MF_CHECKED, IDM_RESTZEIT, "&Restzeit bei Minimiert");
                 AppendMenu(hPopupMenu, MF_SEPARATOR, 0, 0);
                 AppendMenu(hPopupMenu, MF_STRING, IDM_HIDEX, "&Verstecken B");
                 AppendMenu(hPopupMenu, MF_STRING, IDM_HIDEY, "&Verstecken D");
