@@ -4,14 +4,14 @@
  *                                                                          *
  * Purpose : Generic dialog based Win32 application.                        *
  *                                                                          *
- * History : Date      Reason                                               *
- *           17/03/07  Created                                              *
+ * History : Date        Reason                                             *
+ *           17/03/2007  Created                                            *
  *                                                                          *
- ****************************************************************************/
+ ***************************************************************************/
 
-//*********************//
-// Änderungsgeschichte //
-//*********************//*****/
+//****************************/
+//  Änderungsgeschichte       /
+//****/************/**********/
 // aN / 27.03.2007 / 1.0.1.05 / Im Edit-Dialog alte Endzeit als Vorgabe anzeigen
 // aN / 27.03.2007 / 1.0.1.06 / Aufruf für Edit-Dialog auf modal geändert
 // aN / 10.04.2007 / 1.0.1.07 / Speichern und Wiederherstellen der Fensterposition
@@ -87,6 +87,9 @@
 // aN / 09.02.2024 / 4.0.1.82 / Doppelklick aktiviert Liste
 // aN / 02.03.2024 / 4.0.1.83 / Ini-Name per Parameter I setzen
 // aN / 03.03.2024 / 4.0.1.84 / Ini-Name mit Hochkomma und Leerzeichen
+// aN / 13.03.2024 / 4.0.4.85 / automatisches SetNextEvent
+//****/************/**********/*************************************************
+
 
 
 /*
@@ -191,9 +194,10 @@ static HICON hBIcon;
 static TOOLINFO toolTip = { 0 };
 //static HWND hToolTip;
 
-int AlarmDlg = 0;  // Flag ob der Alarmdialog eingeschaltet ist
-int erreicht = 0;  // Flag für Zeit erreicht
+int AlarmDlg  = 0; // Flag ob der Alarmdialog eingeschaltet ist
+int erreicht  = 0; // Flag für Zeit erreicht
 int sound_off = 0; // Sound on/off
+int AutoNext  = 0; // Automatisch Nächstes
 
 SYSTEMTIME DZ = {2012, 0, 0,12,0,0,0,0};
 SYSTEMTIME EZ = {2012, 3,14,17,0,0,0,0};
@@ -1705,6 +1709,13 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     GetModuleFileName(NULL, IniName, sizeof(IniName));
     strcpy(&IniName[strlen(IniName) - 3], "ini");
 
+    if (('N'==IniName[strlen(IniName) - 5]) || ('n'==IniName[strlen(IniName) - 5]))
+    {
+        AutoNext = 1;
+        // 'N' aus IniNamen entfernen
+        strcpy(&IniName[strlen(IniName) - 5], &IniName[strlen(IniName) - 4]);
+    }
+
     /* Initialize common controls. Also needed for MANIFEST's */
     /*
      * TODO: set the ICC_???_CLASSES that you need.
@@ -1836,6 +1847,7 @@ static LRESULT CALLBACK DlgProcMain(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
             {
                 selUhr = sU++;
             }
+
             uhren[selUhr].hSMenu = GetSystemMenu(hwndDlg, FALSE);
             AppendMenu(uhren[selUhr].hSMenu, MF_SEPARATOR, 0, 0);
             AppendMenu(uhren[selUhr].hSMenu, MF_STRING, IDM_STATUS, "Stat&us");
@@ -1849,6 +1861,12 @@ static LRESULT CALLBACK DlgProcMain(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
             AppendMenu(uhren[selUhr].hSMenu, MF_STRING, IDM_TOP, "&TopMost");
             AppendMenu(uhren[selUhr].hSMenu, MF_STRING, IDM_HIDE, "&Verstecken");
             AppendMenu(uhren[selUhr].hSMenu, MF_STRING, IDM_NOSOUND, "&kein Sound");
+
+            // Automatisches SetNextEvent()
+            if (0 != AutoNext)
+            {
+                SetNextEvent();
+            }
 
             AktToolTip();
 
